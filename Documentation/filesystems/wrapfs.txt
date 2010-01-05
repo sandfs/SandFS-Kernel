@@ -1,0 +1,97 @@
+Wrapfs: a null-layer (aka wrapper) stackable file system
+
+Maintainer: Erez Zadok <ezk AT cs DOT stonybrook DOT edu>
+Web Site: <http://wrapfs.filesystems.org/>
+
+------------------------------------------------------------------------------
+MOTIVATION:
+
+Wrapfs is a small null-layer stackable file system, under 1800 lines of
+code.  Compare that to, say, eCryptfs and Unionfs, each of which are over
+10,000 LoC.  As such, Wrapfs is simple and easy to read and understand.
+
+Wrapfs is useful for several reasons.  First, as a platform to test and
+debug generic stacking problems in other Linux stackable file systems.
+Second, as a way to test VFS enhancements to better support stacking in
+Linux.  Third, many people like to experiment with in-kernel file system
+ideas as a prototype; Wrapfs is an ideal small template from which one could
+modify the code to create new functionality.  Fourth, Wrapfs is a very
+useful teaching tool (often used as a starting point for graduate class
+assignments).
+
+------------------------------------------------------------------------------
+OPERATION:
+
+This is a brief description of how Wrapfs operates.  For more information,
+see the full paper published in Linux Expo 1999, titled "A Stackable File
+System Interface For Linux":
+
+	<http://www.fsl.cs.sunysb.edu/docs/linux-stacking/linux.pdf>
+
+The basic function of a stackable file system is to pass an operation and
+its arguments to the lower-level file system.  For every VFS object (inode,
+dentry, file, superblock, etc.), Wrapfs keeps a one-to-one mapping of a
+Wrapfs-level object to the lower one.  We call the Wrapfs object the "upper"
+one, and the one below we call the "lower" one.  Wrapfs stores these
+mappings as simple pointers inside the private field of the existing VFS
+objects (e.g., dentry->d_fsdata, sb->s_fs_info, and a container for inodes).
+
+There are two kinds of stackable operations: those that create new VFS
+objects and those that don't.
+
+The following distilled code snippet shows a method which doesn't create a
+new object; so it just has to pass it to the lower layer and propagate any
+errors back up the VFS:
+
+int wrapfs_unlink(struct inode *dir, struct dentry *dentry)
+{
+	int err;
+	struct inode *lower_dir;
+	struct dentry *lower_dentry;
+	lower_dir = get_lower_inode(dir);
+	lower_dentry = get_lower_dentry(dentry);
+	err = lower_dir->i_op->unlink(lower_dir, lower_dentry);
+	return err;
+}
+
+The following code snippet shows a method which creates a new object.  After
+a lower object gets created, Wrapfs has to also create its own object, and
+make the pointer connections between the upper and lower objects (the latter
+is done via a helper routine called "interpose"):
+
+int wrapfs_create(struct inode *dir, struct dentry *dentry, int mode)
+{
+	int err;
+	struct dentry *lower_dentry;
+	struct inode *lower_dir;
+	lower_dir = wrapfs_lower_inode(dir);
+	lower_dentry = wrapfs_lower_dentry(dentry);
+	err = vfs_create(lower_dir, lower_dentry, mode);
+	if (!err)
+		err = wrapfs_interpose(dentry, dir->i_sb);
+	return err;
+}
+
+------------------------------------------------------------------------------
+USAGE:
+
+First, you have to have some pre-existing directory already mounted from any
+other file system, say /some/lower/path.  Then, to mount wrapfs in
+/mnt/wrapfs, on that lower directory, issue this command:
+
+# mount -t wrapfs /some/lower/path /mnt/wrapfs
+
+------------------------------------------------------------------------------
+CAVEATS:
+
+Stacking on NFS.  Wrapfs has been tested with LTP, racer, fsx, parallel
+compile, and more.  It's been tested on top of ext2, ext3, xfs, reiserfs,
+and tmpfs -- and passed all tests.  However, on top of nfs3, wrapfs has to
+treat silly-deleted files as if they don't exist; the VFS also has special
+handling for silly-deleted files, so this isn't unusual.  Even so, there are
+sometimes races between readdir and lower files which may have gotten
+unlinked: an "rm -fr" may return ENOENT for entries which show up in
+readdir, but were already unlinked on NFS below.  It's mainly harmless.
+This could be solved easily if the VFS were to pass an "unlink/rmdir" namei
+intent to the file system: then wrapfs could detect that the intent was to
+remove the lower object, and ignore ENOENT errors from the lower file system.
