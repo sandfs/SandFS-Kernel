@@ -378,7 +378,7 @@ static void *wrapfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 	/* This is freed by the put_link method assuming a successful call. */
 	buf = kmalloc(len, GFP_KERNEL);
 	if (!buf) {
-		err = -ENOMEM;
+		buf = ERR_PTR(-ENOMEM);
 		goto out;
 	}
 
@@ -389,22 +389,22 @@ static void *wrapfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 	set_fs(old_fs);
 	if (err < 0) {
 		kfree(buf);
-		buf = NULL;
-		goto out;
+		buf = ERR_PTR(err);
+	} else {
+		buf[err] = '\0';
 	}
-	buf[err] = 0;
-	nd_set_link(nd, buf);
-	err = 0;
-
 out:
-	return ERR_PTR(err);
+	nd_set_link(nd, buf);
+	return NULL;
 }
 
 /* this @nd *IS* still used */
 static void wrapfs_put_link(struct dentry *dentry, struct nameidata *nd,
 			    void *cookie)
 {
-	kfree(nd_get_link(nd));
+	char *buf = nd_get_link(nd);
+	if (!IS_ERR(buf))	/* free the char* */
+		kfree(buf);
 }
 
 static int wrapfs_permission(struct inode *inode, int mask)
