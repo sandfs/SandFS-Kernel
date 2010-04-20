@@ -172,7 +172,6 @@ static int wrapfs_open(struct inode *inode, struct file *file)
 
 	/* open lower object and link wrapfs's file struct to lower's */
 	wrapfs_get_lower_path(file->f_path.dentry, &lower_path);
-	path_get(&lower_path);
 	lower_file = dentry_open(lower_path.dentry, lower_path.mnt,
 				 file->f_flags, current_cred());
 	if (IS_ERR(lower_file)) {
@@ -190,7 +189,6 @@ static int wrapfs_open(struct inode *inode, struct file *file)
 		kfree(WRAPFS_F(file));
 	else
 		fsstack_copy_attr_all(inode, wrapfs_lower_inode(inode));
-	wrapfs_put_lower_path(file->f_path.dentry, &lower_path);
 out_err:
 	return err;
 }
