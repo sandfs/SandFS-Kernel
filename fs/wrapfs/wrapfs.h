@@ -24,6 +24,7 @@
 #include <linux/fs_stack.h>
 #include <linux/magic.h>
 #include <linux/uaccess.h>
+#include <linux/slab.h>
 
 /* the file system name */
 #define WRAPFS_NAME "wrapfs"
