@@ -6,18 +6,29 @@ Web Site: <http://wrapfs.filesystems.org/>
 ------------------------------------------------------------------------------
 MOTIVATION:
 
-Wrapfs is a small null-layer stackable file system, under 1800 lines of
-code.  Compare that to, say, eCryptfs and Unionfs, each of which are over
-10,000 LoC.  As such, Wrapfs is simple and easy to read and understand.
+Wrapfs is a small null-layer stackable file system, similar to BSD's Nullfs.
+Wrapfs is small, under 1800 lines of code.  Compare that to, say, eCryptfs
+and Unionfs, each of which are over 10,000 LoC.  As such, Wrapfs is simple
+and easy to read and understand.  Wrapfs is useful for several reasons:
 
-Wrapfs is useful for several reasons.  First, as a platform to test and
-debug generic stacking problems in other Linux stackable file systems.
-Second, as a way to test VFS enhancements to better support stacking in
-Linux.  Third, many people like to experiment with in-kernel file system
-ideas as a prototype; Wrapfs is an ideal small template from which one could
-modify the code to create new functionality.  Fourth, Wrapfs is a very
-useful teaching tool (often used as a starting point for graduate class
-assignments).
+1. Many people like to experiment with in-kernel file system ideas as a
+   prototype; Wrapfs is an ideal small template from which one could modify
+   the code to create new file system functionality incrementally.
+
+2. As a platform to test and debug generic stacking problems in other Linux
+   stackable file systems (e.g., ecryptfs).
+
+3. As a way to test VFS enhancements to better support stacking in Linux.
+
+4. Wrapfs is a very useful instructional tool, often used as a starting
+   point for course assignments, for people who want a small example of who
+   the Linux VFS works, or for those who want to learn to write new Linux
+   file systems.
+
+Various versions of Wrapfs appeared as part of the "fistgen" package since
+1994, and have been used by numerous users world-wide.  For a more detailed
+history of Wrapfs, and list of most of its known users, see the section
+marked "HISTORY" below.
 
 ------------------------------------------------------------------------------
 OPERATION:
@@ -40,8 +51,8 @@ There are two kinds of stackable operations: those that create new VFS
 objects and those that don't.
 
 The following distilled code snippet shows a method which doesn't create a
-new object; so it just has to pass it to the lower layer and propagate any
-errors back up the VFS:
+new object.  The method just has to pass it to the lower layer and propagate
+any errors back up the VFS:
 
 int wrapfs_unlink(struct inode *dir, struct dentry *dentry)
 {
@@ -72,6 +83,12 @@ int wrapfs_create(struct inode *dir, struct dentry *dentry, int mode)
 	return err;
 }
 
+The wrapfs_unlink code snippet above can be easily modified to change the
+behavior of unlink(2).  For example, if an ->unlink operation is changed to
+->rename, this could become the basis for an "undo" file system; or if the
+lower_dentry's name gets encrypted before calling the lower ->unlink, this
+could be part of an encryption file system.
+
 ------------------------------------------------------------------------------
 USAGE:
 
@@ -80,6 +97,8 @@ other file system, say /some/lower/path.  Then, to mount wrapfs in
 /mnt/wrapfs, on that lower directory, issue this command:
 
 # mount -t wrapfs /some/lower/path /mnt/wrapfs
+
+To access the files via Wrapfs, use the mount point /mnt/wrapfs.
 
 ------------------------------------------------------------------------------
 CAVEATS:
@@ -94,4 +113,55 @@ unlinked: an "rm -fr" may return ENOENT for entries which show up in
 readdir, but were already unlinked on NFS below.  It's mainly harmless.
 This could be solved easily if the VFS were to pass an "unlink/rmdir" namei
 intent to the file system: then wrapfs could detect that the intent was to
-remove the lower object, and ignore ENOENT errors from the lower file system.
+remove the lower object, and ignore ENOENT errors from the lower file
+system.
+
+------------------------------------------------------------------------------
+HISTORY:
+
+Wrapfs was developed initially in 1994 for Linux 2.1, as part of Erez
+Zadok's graduate work at Columbia University.  It was designed to be a
+flexible null-layer, pass-through, stackable file system, from which other
+file systems would be developed and even instantiated automatically using a
+high-level language.  One of the first file systems developed from Wrapfs
+was a simple encryption file system called Cryptfs (eCryptfs is based on
+Cryptfs).  Other examples include Gzipfs, a stackable compression file
+system, and Unionfs, a stackable unification file system.  Wrapfs was
+integrated into a larger package called fistgen (see www.filesystems.org),
+and ported to FreeBSD and Solaris.  Wrapfs and fistgen continued to be
+maintained for newer versions of kernels, but remained largely standalone
+until recently: this release of Wrapfs for Linux represents a clean version
+written from scratch.
+
+Over the past 15+ years, versions of Wrapfs had been used by many users and
+companies.  At one point or another, the following groups have used stacking
+code based on Wrapfs.
+
+1. PROJECTS: eCryptfs, Unionfs, mini_fo, Aufs, FindFS, StoreCompress,
+   TestFS, ToPAS, and MFS.
+
+2. COMPANIES AND RESEARCH LABS: Bell Labs's Plan 9 group, EMC,
+   Hewlett-Packard, IBM Research Almaden, IBM Research Austin, Red Hat,
+   SuSE, Sun Microsystems, Veritas, Booyaka, CalSoft (India), Computer Farm,
+   Deutsche Bank (Germany), DreamWorks LLC, Eli Lilly and Company, FAME
+   Information Services, GMX AG (Germany), IBM global services (India), IDA
+   Center for Communications Research, Indra Networks, Inc., Kavi
+   Corporation, Mendepie, Mitsubishi Electric (Japan), Mobile-Mind, Monster
+   Labs, Morning Network (Russia), NeST Technologies, Packet General
+   Networks, Inc., Outstep Technologies, Reflective Systems Group, River
+   Styx Internet, SARAI Net, Saint-Petersburg Official Web Site (Russia),
+   Shadow Island Games, TISCover (Germany), Trymedia Systems, Uber Admin,
+   Videsh Sanchar Nigam Limited (India), Wanadoo (France), and iNsu
+   Innovations.
+
+3. UNIVERSITIES: Georgia Institute of Technology, Stanford University, UC
+   Berkeley, UCLA, University of Maryland, College Park, University of
+   Michigan, Ben Gurion University (Israel), Clarkson University, Clemson
+   University, Deutsches Elektronen Synchrotron (Germany), Electronics and
+   Telecommunications Research Institute (South Korea), Indian Institute of
+   Technology (India), National Taiwan University, Pune University (India),
+   The College of William \& Mary, Trinity College (Ireland), Universitaet
+   Frankfurt am Main (Germany), University Hospital Olomouc (Czech
+   Republic), and University of Salermo (Italy).
+
+------------------------------------------------------------------------------
