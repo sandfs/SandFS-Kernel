@@ -42,7 +42,7 @@ static int wrapfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	struct path lower_path;
 
 	wrapfs_get_lower_path(dentry, &lower_path);
-	err = vfs_statfs(lower_path.dentry, buf);
+	err = vfs_statfs(&lower_path, buf);
 	wrapfs_put_lower_path(dentry, &lower_path);
 
 	/* set return buf to our f/s to avoid confusing user-level utils */
@@ -79,10 +79,12 @@ static int wrapfs_remount_fs(struct super_block *sb, int *flags, char *options)
  * that needs to be, before the inode is completely destroyed and put
  * on the inode free list.
  */
-static void wrapfs_clear_inode(struct inode *inode)
+static void wrapfs_evict_inode(struct inode *inode)
 {
 	struct inode *lower_inode;
 
+	truncate_inode_pages(&inode->i_data, 0);
+	end_writeback(inode);
 	/*
 	 * Decrement a reference to a lower_inode, which was incremented
 	 * by our read_inode when it was created initially.
@@ -157,7 +159,7 @@ const struct super_operations wrapfs_sops = {
 	.put_super	= wrapfs_put_super,
 	.statfs		= wrapfs_statfs,
 	.remount_fs	= wrapfs_remount_fs,
-	.clear_inode	= wrapfs_clear_inode,
+	.evict_inode	= wrapfs_evict_inode,
 	.umount_begin	= wrapfs_umount_begin,
 	.show_options	= generic_show_options,
 	.alloc_inode	= wrapfs_alloc_inode,
