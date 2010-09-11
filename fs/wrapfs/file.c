@@ -63,7 +63,8 @@ static int wrapfs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	return err;
 }
 
-static long wrapfs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+static long wrapfs_unlocked_ioctl(struct file *file, unsigned int cmd,
+				  unsigned long arg)
 {
 	long err = -ENOTTY;
 	struct file *lower_file;
@@ -73,19 +74,32 @@ static long wrapfs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	/* XXX: use vfs_ioctl if/when VFS exports it */
 	if (!lower_file || !lower_file->f_op)
 		goto out;
-	if (lower_file->f_op->unlocked_ioctl) {
+	if (lower_file->f_op->unlocked_ioctl)
 		err = lower_file->f_op->unlocked_ioctl(lower_file, cmd, arg);
-	} else if (lower_file->f_op->ioctl) {
-		lock_kernel();
-		err = lower_file->f_op->ioctl(
-			lower_file->f_path.dentry->d_inode,
-			lower_file, cmd, arg);
-		unlock_kernel();
-	}
 
 out:
 	return err;
 }
+
+#ifdef CONFIG_COMPAT
+static long wrapfs_compat_ioctl(struct file *file, unsigned int cmd,
+				unsigned long arg)
+{
+	long err = -ENOTTY;
+	struct file *lower_file;
+
+	lower_file = wrapfs_lower_file(file);
+
+	/* XXX: use vfs_ioctl if/when VFS exports it */
+	if (!lower_file || !lower_file->f_op)
+		goto out;
+	if (lower_file->f_op->compat_ioctl)
+		err = lower_file->f_op->compat_ioctl(lower_file, cmd, arg);
+
+out:
+	return err;
+}
+#endif
 
 static int wrapfs_mmap(struct file *file, struct vm_area_struct *vma)
 {
@@ -253,7 +267,10 @@ const struct file_operations wrapfs_main_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= wrapfs_read,
 	.write		= wrapfs_write,
-	.unlocked_ioctl	= wrapfs_ioctl,
+	.unlocked_ioctl	= wrapfs_unlocked_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= wrapfs_compat_ioctl,
+#endif
 	.mmap		= wrapfs_mmap,
 	.open		= wrapfs_open,
 	.flush		= wrapfs_flush,
@@ -267,7 +284,10 @@ const struct file_operations wrapfs_dir_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= generic_read_dir,
 	.readdir	= wrapfs_readdir,
-	.unlocked_ioctl	= wrapfs_ioctl,
+	.unlocked_ioctl	= wrapfs_unlocked_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= wrapfs_compat_ioctl,
+#endif
 	.open		= wrapfs_open,
 	.release	= wrapfs_file_release,
 	.flush		= wrapfs_flush,
