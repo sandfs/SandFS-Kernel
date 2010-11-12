@@ -423,7 +423,6 @@ static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 	struct dentry *lower_dentry;
 	struct inode *inode;
 	struct inode *lower_inode;
-	loff_t size;
 	struct path lower_path;
 
 	inode = dentry->d_inode;
@@ -453,14 +452,10 @@ static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 	 * the lower level.
 	 */
 	if (ia->ia_valid & ATTR_SIZE) {
-		size = i_size_read(inode);
-		if (ia->ia_size < size ||
-		    (ia->ia_size > size &&
-		     inode->i_sb->s_maxbytes < lower_inode->i_sb->s_maxbytes)) {
-			err = vmtruncate(inode, ia->ia_size);
-			if (err)
-				goto out;
-		}
+		err = inode_newsize_ok(inode, ia->ia_size);
+		if (err)
+			goto out;
+		truncate_setsize(inode, ia->ia_size);
 	}
 
 	/* notify the (possibly copied-up) lower inode */
