@@ -427,24 +427,27 @@ static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 	struct inode *inode;
 	struct inode *lower_inode;
 	struct path lower_path;
+	struct iattr lower_ia;
 
 	inode = dentry->d_inode;
 
 	/*
-	 * mode change is for clearing setuid/setgid. Allow lower file system
-	 * to reinterpret it in its own way.
+	 * Check if user has permission to change inode.  We don't check if
+	 * this user can change the lower inode: that should happen when
+	 * calling notify_change on the lower inode.
 	 */
-	if (ia->ia_valid & (ATTR_KILL_SUID | ATTR_KILL_SGID))
-		ia->ia_valid &= ~ATTR_MODE;
+	err = inode_change_ok(inode, ia);
+	if (err)
+		goto out_err;
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
 	lower_inode = wrapfs_lower_inode(inode);
 
-	/* check if user has permission to change lower inode */
-	err = inode_change_ok(lower_inode, ia);
-	if (err)
-		goto out;
+	/* prepare our own lower struct iattr (with the lower file) */
+	memcpy(&lower_ia, ia, sizeof(lower_ia));
+	if (ia->ia_valid & ATTR_FILE)
+		lower_ia.ia_file = wrapfs_lower_file(ia->ia_file);
 
 	/*
 	 * If shrinking, first truncate upper level to cancel writing dirty
@@ -461,6 +464,13 @@ static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 		truncate_setsize(inode, ia->ia_size);
 	}
 
+	/*
+	 * mode change is for clearing setuid/setgid bits. Allow lower fs
+	 * to interpret this in its own way.
+	 */
+	if (lower_ia.ia_valid & (ATTR_KILL_SUID | ATTR_KILL_SGID))
+		lower_ia.ia_valid &= ~ATTR_MODE;
+
 	/* notify the (possibly copied-up) lower inode */
 	/*
 	 * Note: we use lower_dentry->d_inode, because lower_inode may be
@@ -468,24 +478,22 @@ static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 	 * tries to open(), unlink(), then ftruncate() a file.
 	 */
 	mutex_lock(&lower_dentry->d_inode->i_mutex);
-	err = notify_change(lower_dentry, ia);
+	err = notify_change(lower_dentry, &lower_ia); /* note: lower_ia */
 	mutex_unlock(&lower_dentry->d_inode->i_mutex);
 	if (err)
 		goto out;
 
 	/* get attributes from the lower inode */
 	fsstack_copy_attr_all(inode, lower_inode);
-
-	if (ia->ia_valid & ATTR_MTIME_SET)
-		inode->i_mtime = lower_inode->i_mtime;
-	if (ia->ia_valid & ATTR_CTIME)
-		inode->i_ctime = lower_inode->i_ctime;
-	if (ia->ia_valid & ATTR_ATIME_SET)
-		inode->i_atime = lower_inode->i_atime;
-	fsstack_copy_inode_size(inode, lower_inode);
+	/*
+	 * Not running fsstack_copy_inode_size(inode, lower_inode), because
+	 * VFS should update our inode size, and notify_change on
+	 * lower_inode should update its size.
+	 */
 
 out:
 	wrapfs_put_lower_path(dentry, &lower_path);
+out_err:
 	return err;
 }
 
