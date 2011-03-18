@@ -211,7 +211,7 @@ static int wrapfs_rmdir(struct inode *dir, struct dentry *dentry)
 	struct dentry *lower_dir_dentry;
 	int err;
 	struct path lower_path;
-
+	UDBG;
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
 	lower_dir_dentry = lock_parent(lower_dentry);

@@ -33,7 +33,7 @@
 #define WRAPFS_ROOT_INO     1
 
 /* useful for tracking code reachability */
-#define UDBG printk("DBG:%s:%s:%d\n", __FILE__, __func__, __LINE__)
+#define UDBG printk(KERN_DEFAULT "DBG:%s:%s:%d\n", __FILE__, __func__, __LINE__)
 
 /* operations vectors defined in specific files */
 extern const struct file_operations wrapfs_main_fops;

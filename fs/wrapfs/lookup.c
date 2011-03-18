@@ -144,8 +144,9 @@ static struct inode *wrapfs_iget(struct super_block *sb,
 
 	inode = iget5_locked(sb, /* our superblock */
 			     /*
-			      * hashval: we use inode number, but we can also use
-			      * "(unsigned long)lower_inode" instead.
+			      * hashval: we use inode number, but we can
+			      * also use "(unsigned long)lower_inode"
+			      * instead.
 			      */
 			     lower_inode->i_ino, /* hashval */
 			     wrapfs_inode_test,	/* inode comparison function */
