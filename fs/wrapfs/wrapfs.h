@@ -19,12 +19,12 @@
 #include <linux/mount.h>
 #include <linux/namei.h>
 #include <linux/seq_file.h>
-#include <linux/smp_lock.h>
 #include <linux/statfs.h>
 #include <linux/fs_stack.h>
 #include <linux/magic.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/sched.h>
 
 /* the file system name */
 #define WRAPFS_NAME "wrapfs"

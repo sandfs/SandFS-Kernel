@@ -131,22 +131,19 @@ out:
 	return err;
 }
 
-static int wrapfs_get_sb(struct file_system_type *fs_type,
-			 int flags, const char *dev_name,
-			 void *raw_data, struct vfsmount *mnt)
+struct dentry *wrapfs_mount(struct file_system_type *fs_type, int flags,
+			    const char *dev_name, void *raw_data)
 {
-	int err;
 	void *lower_path_name = (void *) dev_name;
 
-	err = get_sb_nodev(fs_type, flags, lower_path_name,
-			   wrapfs_read_super, mnt);
-	return err;
+	return mount_nodev(fs_type, flags, lower_path_name,
+			   wrapfs_read_super);
 }
 
 static struct file_system_type wrapfs_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= WRAPFS_NAME,
-	.get_sb		= wrapfs_get_sb,
+	.mount		= wrapfs_mount,
 	.kill_sb	= generic_shutdown_super,
 	.fs_flags	= FS_REVAL_DOT,
 };

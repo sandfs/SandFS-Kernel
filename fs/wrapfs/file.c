@@ -254,11 +254,9 @@ static int wrapfs_fasync(int fd, struct file *file, int flag)
 	int err = 0;
 	struct file *lower_file = NULL;
 
-	lock_kernel();
 	lower_file = wrapfs_lower_file(file);
 	if (lower_file->f_op && lower_file->f_op->fasync)
 		err = lower_file->f_op->fasync(fd, lower_file, flag);
-	unlock_kernel();
 
 	return err;
 }
