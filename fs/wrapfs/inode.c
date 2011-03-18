@@ -42,8 +42,6 @@ static int wrapfs_create(struct inode *dir, struct dentry *dentry,
 		goto out;
 	fsstack_copy_attr_times(dir, wrapfs_lower_inode(dir));
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
-	/* update no. of links on parent directory */
-	dir->i_nlink = wrapfs_lower_inode(dir)->i_nlink;
 
 out:
 	mnt_drop_write(lower_path.mnt);
@@ -164,8 +162,6 @@ static int wrapfs_symlink(struct inode *dir, struct dentry *dentry,
 		goto out;
 	fsstack_copy_attr_times(dir, wrapfs_lower_inode(dir));
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
-	/* update no. of links on parent directory */
-	dir->i_nlink = wrapfs_lower_inode(dir)->i_nlink;
 
 out:
 	mnt_drop_write(lower_path.mnt);
@@ -268,8 +264,6 @@ static int wrapfs_mknod(struct inode *dir, struct dentry *dentry, int mode,
 		goto out;
 	fsstack_copy_attr_times(dir, wrapfs_lower_inode(dir));
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
-	/* update no. of links on parent directory */
-	dir->i_nlink = wrapfs_lower_inode(dir)->i_nlink;
 
 out:
 	mnt_drop_write(lower_path.mnt);
