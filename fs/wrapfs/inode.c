@@ -107,22 +107,20 @@ static int wrapfs_unlink(struct inode *dir, struct dentry *dentry)
 	dget(lower_dentry);
 	lower_dir_dentry = lock_parent(lower_dentry);
 
-	/*
-	 * If the lower dentry is already silly-renamed (NFS), then we treat
-	 * this unlink operation as if it already succeeded, and don't
-	 * actually call vfs_unlink on the lower dentry (NFS may return
-	 * EBUSY).  Note: VFS also has special handling for silly-renamed
-	 * files, so this treatment isn't unusual.
-	 */
-	if (lower_dentry->d_flags & DCACHE_NFSFS_RENAMED) {
-		err = 0;
-		goto out_unlock;
-	}
 	err = mnt_want_write(lower_path.mnt);
 	if (err)
 		goto out_unlock;
 	err = vfs_unlink(lower_dir_inode, lower_dentry);
-	/* Note: unlinking on top of NFS can cause silly-renamed files */
+
+	/*
+	 * Note: unlinking on top of NFS can cause silly-renamed files.
+	 * Trying to delete such files results in EBUSY from NFS
+	 * below.  Silly-renamed files will get deleted by NFS later on, so
+	 * we just need to detect them here and treat such EBUSY errors as
+	 * if the upper file was successfully deleted.
+	 */
+	if (err == -EBUSY && lower_dentry->d_flags & DCACHE_NFSFS_RENAMED)
+		err = 0;
 	if (err)
 		goto out;
 	fsstack_copy_attr_times(dir, lower_dir_inode);
@@ -218,11 +216,6 @@ static int wrapfs_rmdir(struct inode *dir, struct dentry *dentry)
 	lower_dentry = lower_path.dentry;
 	lower_dir_dentry = lock_parent(lower_dentry);
 
-	/* see comment about silly-renamed files in wrapfs_unlink */
-	if (lower_dentry->d_flags & DCACHE_NFSFS_RENAMED) {
-		err = 0;
-		goto out_unlock;
-	}
 	err = mnt_want_write(lower_path.mnt);
 	if (err)
 		goto out_unlock;

@@ -106,15 +106,13 @@ CAVEATS:
 Stacking on NFS.  Wrapfs has been tested with LTP, racer, fsx, parallel
 compile, and more.  It's been tested on top of ext2, ext3, xfs, reiserfs,
 and tmpfs -- and passed all tests.  However, on top of nfs3, wrapfs has to
-treat silly-deleted files as if they don't exist; the VFS also has special
-handling for silly-deleted files, so this isn't unusual.  Even so, there are
-sometimes races between readdir and lower files which may have gotten
-unlinked: an "rm -fr" may return ENOENT for entries which show up in
-readdir, but were already unlinked on NFS below.  It's mainly harmless.
-This could be solved easily if the VFS were to pass an "unlink/rmdir" namei
-intent to the file system: then wrapfs could detect that the intent was to
-remove the lower object, and ignore ENOENT errors from the lower file
-system.
+treat silly-deleted files as if they don't exist: in ->unlink, if we try to
+vfs_unlink an NFS silly-deleted file, NFS returns EBUSY; so we simply ignore
+it and return 0 (success) to the VFS.  NFS will delete this file later on
+anyway.  As the VFS also has special handling for silly-deleted files, this
+isn't unusual.  A cleaner way to handle this in the future is if the VFS
+were to handle silly-deleted (aka "delayed-delete") files entirely at the
+VFS.
 
 ------------------------------------------------------------------------------
 HISTORY:
