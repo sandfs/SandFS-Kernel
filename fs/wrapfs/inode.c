@@ -126,6 +126,7 @@ static int wrapfs_unlink(struct inode *dir, struct dentry *dentry)
 	if (err)
 		goto out;
 	fsstack_copy_attr_times(dir, lower_dir_inode);
+	fsstack_copy_inode_size(dir, lower_dir_inode);
 	dentry->d_inode->i_nlink =
 		wrapfs_lower_inode(dentry->d_inode)->i_nlink;
 	dentry->d_inode->i_ctime = dir->i_ctime;
@@ -230,6 +231,7 @@ static int wrapfs_rmdir(struct inode *dir, struct dentry *dentry)
 		goto out;
 
 	fsstack_copy_attr_times(dir, lower_dir_dentry->d_inode);
+	fsstack_copy_inode_size(dir, lower_dir_dentry->d_inode);
 	dir->i_nlink = lower_dir_dentry->d_inode->i_nlink;
 
 out:
@@ -318,12 +320,15 @@ static int wrapfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			 lower_new_dir_dentry->d_inode, lower_new_dentry);
 	if (err)
 		goto out_err;
-	if (old_dentry->d_inode)
-		fsstack_copy_attr_times(old_dentry->d_inode,
-				wrapfs_lower_inode(old_dentry->d_inode));
-	if (new_dentry->d_inode)
-		fsstack_copy_attr_times(new_dentry->d_inode,
-				wrapfs_lower_inode(new_dentry->d_inode));
+
+	fsstack_copy_attr_all(new_dir, lower_new_dir_dentry->d_inode);
+	fsstack_copy_inode_size(new_dir, lower_new_dir_dentry->d_inode);
+	if (new_dir != old_dir) {
+		fsstack_copy_attr_all(old_dir,
+				      lower_old_dir_dentry->d_inode);
+		fsstack_copy_inode_size(old_dir,
+					lower_old_dir_dentry->d_inode);
+	}
 
 out_err:
 	mnt_drop_write(lower_new_path.mnt);
