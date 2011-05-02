@@ -43,7 +43,8 @@ int new_dentry_private_data(struct dentry *dentry)
 {
 	struct wrapfs_dentry_info *info = WRAPFS_D(dentry);
 
-	info = kmem_cache_alloc(wrapfs_dentry_cachep, GFP_ATOMIC);
+	/* use zalloc to init dentry_info.lower_path */
+	info = kmem_cache_zalloc(wrapfs_dentry_cachep, GFP_ATOMIC);
 	if (!info)
 		return -ENOMEM;
 
@@ -257,17 +258,19 @@ out:
  * Main driver function for wrapfs's lookup.
  *
  * Returns: NULL (ok), ERR_PTR if an error occurred.
+ * Fills in lower_parent_path with <dentry,mnt> on success.
  */
-static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flag,
+static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flags,
 				      struct path *lower_parent_path)
 {
 	int err = 0;
 	struct vfsmount *lower_dir_mnt;
 	struct dentry *lower_dir_dentry = NULL;
+	struct dentry *lower_dentry;
 	const char *name;
-	int namelen;
 	struct nameidata lower_nd;
 	struct path lower_path;
+	struct qstr this;
 
 	/* must initialize dentry operations */
 	dentry->d_op = &wrapfs_dops;
@@ -276,18 +279,12 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flag,
 		goto out;
 
 	name = dentry->d_name.name;
-	namelen = dentry->d_name.len;
 
-	/* Now start the actual lookup procedure. */
-
+	/* now start the actual lookup procedure */
 	lower_dir_dentry = lower_parent_path->dentry;
-	BUG_ON(!lower_dir_dentry || !lower_dir_dentry->d_inode);
-	BUG_ON(!S_ISDIR(lower_dir_dentry->d_inode->i_mode));
-
-	/* Now do regular lookup; lookup @name */
 	lower_dir_mnt = lower_parent_path->mnt;
 
-	/* Use vfs_path_lookup to check if the dentry exists or no */
+	/* Use vfs_path_lookup to check if the dentry exists or not */
 	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
 			      &lower_nd);
 
@@ -302,32 +299,38 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flag,
 
 	/*
 	 * We don't consider ENOENT an error, and we want to return a
-	 * negative dentry (ala lookup_one_len).  As we know there was no
-	 * inode for this name before (-ENOENT), then it's safe to call
-	 * lookup_one_len (which doesn't take a vfsmount).
+	 * negative dentry.
 	 */
-	if (err == -ENOENT) {
-		mutex_lock(&lower_dir_dentry->d_inode->i_mutex);
-		lower_path.dentry = lookup_one_len(name, lower_dir_dentry,
-						   strlen(name));
-		mutex_unlock(&lower_dir_dentry->d_inode->i_mutex);
-		lower_path.mnt = mntget(lower_dir_mnt);
-		wrapfs_set_lower_path(dentry, &lower_path);
+	if (err && err != -ENOENT)
+		goto out;
 
-		/*
-		 * If the intent is to create a file, then create a dummy
-		 * inode and associate with the dentry.
-		 */
-		if (flag & (LOOKUP_CREATE|LOOKUP_RENAME_TARGET))
-			err = 0;
+	/* instatiate a new negative dentry */
+	this.name = name;
+	this.len = strlen(name);
+	this.hash = full_name_hash(this.name, this.len);
+	lower_dentry = d_lookup(lower_dir_dentry, &this);
+	if (lower_dentry)
+		goto setup_lower;
 
+	lower_dentry = d_alloc(lower_dir_dentry, &this);
+	if (!lower_dentry) {
+		err = -ENOMEM;
 		goto out;
 	}
+	d_add(lower_dentry, NULL); /* instantiate and hash */
 
-	/* if got here: real errors */
+setup_lower:
+	lower_path.dentry = lower_dentry;
+	lower_path.mnt = mntget(lower_dir_mnt);
+	wrapfs_set_lower_path(dentry, &lower_path);
 
-	/* no need to cleanup, just reset */
-	wrapfs_reset_lower_path(dentry); /* XXX: still needed? */
+	/*
+	 * If the intent is to create a file, then don't return an error, so
+	 * the VFS will continue the process of making this negative dentry
+	 * into a positive one.
+	 */
+	if (flags & (LOOKUP_CREATE|LOOKUP_RENAME_TARGET))
+		err = 0;
 
 out:
 	return ERR_PTR(err);
