@@ -268,7 +268,6 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flags,
 	struct dentry *lower_dir_dentry = NULL;
 	struct dentry *lower_dentry;
 	const char *name;
-	struct nameidata lower_nd;
 	struct path lower_path;
 	struct qstr this;
 
@@ -286,12 +285,12 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flags,
 
 	/* Use vfs_path_lookup to check if the dentry exists or not */
 	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
-			      &lower_nd);
+			      &lower_path);
 
 	/* no error: handle positive dentries */
 	if (!err) {
-		wrapfs_set_lower_path(dentry, &lower_nd.path);
-		err = wrapfs_interpose(dentry, dentry->d_sb, &lower_nd.path);
+		wrapfs_set_lower_path(dentry, &lower_path);
+		err = wrapfs_interpose(dentry, dentry->d_sb, &lower_path);
 		if (err) /* path_put underlying path on error */
 			wrapfs_put_reset_lower_path(dentry);
 		goto out;
