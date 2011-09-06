@@ -399,13 +399,10 @@ static void wrapfs_put_link(struct dentry *dentry, struct nameidata *nd,
 		kfree(buf);
 }
 
-static int wrapfs_permission(struct inode *inode, int mask, unsigned int flags)
+static int wrapfs_permission(struct inode *inode, int mask)
 {
 	struct inode *lower_inode;
 	int err;
-
-	if (flags & IPERM_FLAG_RCU)
-		return -ECHILD;
 
 	lower_inode = wrapfs_lower_inode(inode);
 	err = inode_permission(lower_inode, mask);
