@@ -22,6 +22,9 @@ static int wrapfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	struct dentry *lower_dentry;
 	int err = 1;
 
+	if (nd && nd->flags & LOOKUP_RCU)
+		return -ECHILD;
+
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
 	if (!lower_dentry->d_op || !lower_dentry->d_op->d_revalidate)
