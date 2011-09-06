@@ -13,32 +13,6 @@
 #include <linux/module.h>
 
 /*
- * our custom d_alloc_root work-alike
- *
- * we can't use d_alloc_root if we want to use our own interpose function
- * unchanged, so we simply call our own "fake" d_alloc_root
- */
-static struct dentry *wrapfs_d_alloc_root(struct super_block *sb)
-{
-	struct dentry *ret = NULL;
-
-	if (sb) {
-		static const struct qstr name = {
-			.name = "/",
-			.len = 1
-		};
-
-		ret = d_alloc(NULL, &name);
-		if (ret) {
-			d_set_d_op(ret, &wrapfs_dops);
-			ret->d_sb = sb;
-			ret->d_parent = ret;
-		}
-	}
-	return ret;
-}
-
-/*
  * There is no need to lock the wrapfs_super_info's rwsem as there is no
  * way anyone can have a reference to the superblock at this point in time.
  */
@@ -48,6 +22,7 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 	struct super_block *lower_sb;
 	struct path lower_path;
 	char *dev_name = (char *) raw_data;
+	struct inode *inode;
 
 	if (!dev_name) {
 		printk(KERN_ERR
@@ -89,12 +64,18 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 
 	sb->s_op = &wrapfs_sops;
 
-	/* see comment next to the definition of wrapfs_d_alloc_root */
-	sb->s_root = wrapfs_d_alloc_root(sb);
-	if (!sb->s_root) {
-		err = -ENOMEM;
+	/* get a new inode and allocate our root dentry */
+	inode = wrapfs_iget(sb, lower_path.dentry->d_inode);
+	if (IS_ERR(inode)) {
+		err = PTR_ERR(inode);
 		goto out_sput;
 	}
+	sb->s_root = d_alloc_root(inode);
+	if (!sb->s_root) {
+		err = -ENOMEM;
+		goto out_iput;
+	}
+	d_set_d_op(sb->s_root, &wrapfs_dops);
 
 	/* link the upper and lower dentries */
 	sb->s_root->d_fsdata = NULL;
@@ -102,23 +83,28 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 	if (err)
 		goto out_freeroot;
 
+	/* if get here: cannot have error */
+
 	/* set the lower dentries for s_root */
 	wrapfs_set_lower_path(sb->s_root, &lower_path);
 
-	/* call interpose to create the upper level inode */
-	err = wrapfs_interpose(sb->s_root, sb, &lower_path);
-	if (!err) {
-		if (!silent)
-			printk(KERN_INFO
-			       "wrapfs: mounted on top of %s type %s\n",
-			       dev_name, lower_sb->s_type->name);
-		goto out;
-	}
-	/* else error: fall through */
+	/*
+	 * No need to call interpose because we already have a positive
+	 * dentry, which was instantiated by d_alloc_root.  Just need to
+	 * d_rehash it.
+	 */
+	d_rehash(sb->s_root);
+	if (!silent)
+		printk(KERN_INFO
+		       "wrapfs: mounted on top of %s type %s\n",
+		       dev_name, lower_sb->s_type->name);
+	goto out; /* all is well */
 
-	free_dentry_private_data(sb->s_root);
+	/* no longer needed: free_dentry_private_data(sb->s_root); */
 out_freeroot:
 	dput(sb->s_root);
+out_iput:
+	iput(inode);
 out_sput:
 	/* drop refs we took earlier */
 	atomic_dec(&lower_sb->s_active);

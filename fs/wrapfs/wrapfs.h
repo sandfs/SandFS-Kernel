@@ -56,6 +56,8 @@ extern int init_lower_nd(struct nameidata *nd, unsigned int flags);
 extern void release_lower_nd(struct nameidata *nd, int err);
 extern struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
 				    struct nameidata *nd);
+extern struct inode *wrapfs_iget(struct super_block *sb,
+				 struct inode *lower_inode);
 extern int wrapfs_interpose(struct dentry *dentry, struct super_block *sb,
 			    struct path *lower_path);
 
