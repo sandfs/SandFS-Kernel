@@ -30,7 +30,7 @@ static struct dentry *wrapfs_d_alloc_root(struct super_block *sb)
 
 		ret = d_alloc(NULL, &name);
 		if (ret) {
-			ret->d_op = &wrapfs_dops;
+			d_set_d_op(ret, &wrapfs_dops);
 			ret->d_sb = sb;
 			ret->d_parent = ret;
 		}
