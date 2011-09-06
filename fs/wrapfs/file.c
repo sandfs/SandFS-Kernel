@@ -234,18 +234,22 @@ static int wrapfs_file_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int wrapfs_fsync(struct file *file, int datasync)
+static int wrapfs_fsync(struct file *file, loff_t start, loff_t end,
+			int datasync)
 {
 	int err;
 	struct file *lower_file;
 	struct path lower_path;
 	struct dentry *dentry = file->f_path.dentry;
 
+	err = generic_file_fsync(file, start, end, datasync);
+	if (err)
+		goto out;
 	lower_file = wrapfs_lower_file(file);
 	wrapfs_get_lower_path(dentry, &lower_path);
-	err = vfs_fsync(lower_file, datasync);
+	err = vfs_fsync_range(lower_file, start, end, datasync);
 	wrapfs_put_lower_path(dentry, &lower_path);
-
+out:
 	return err;
 }
 
