@@ -82,8 +82,8 @@ static int wrapfs_link(struct dentry *old_dentry, struct inode *dir,
 		goto out;
 	fsstack_copy_attr_times(dir, lower_new_dentry->d_inode);
 	fsstack_copy_inode_size(dir, lower_new_dentry->d_inode);
-	old_dentry->d_inode->i_nlink =
-		wrapfs_lower_inode(old_dentry->d_inode)->i_nlink;
+	set_nlink(old_dentry->d_inode,
+		  wrapfs_lower_inode(old_dentry->d_inode)->i_nlink);
 	i_size_write(new_dentry->d_inode, file_size_save);
 out:
 	mnt_drop_write(lower_new_path.mnt);
@@ -125,8 +125,8 @@ static int wrapfs_unlink(struct inode *dir, struct dentry *dentry)
 		goto out;
 	fsstack_copy_attr_times(dir, lower_dir_inode);
 	fsstack_copy_inode_size(dir, lower_dir_inode);
-	dentry->d_inode->i_nlink =
-		wrapfs_lower_inode(dentry->d_inode)->i_nlink;
+	set_nlink(dentry->d_inode,
+		  wrapfs_lower_inode(dentry->d_inode)->i_nlink);
 	dentry->d_inode->i_ctime = dir->i_ctime;
 	d_drop(dentry); /* this is needed, else LTP fails (VFS won't do it) */
 out:
@@ -195,7 +195,7 @@ static int wrapfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	fsstack_copy_attr_times(dir, wrapfs_lower_inode(dir));
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
 	/* update number of links on parent directory */
-	dir->i_nlink = wrapfs_lower_inode(dir)->i_nlink;
+	set_nlink(dir, wrapfs_lower_inode(dir)->i_nlink);
 
 out:
 	mnt_drop_write(lower_path.mnt);
@@ -228,7 +228,7 @@ static int wrapfs_rmdir(struct inode *dir, struct dentry *dentry)
 		clear_nlink(dentry->d_inode);
 	fsstack_copy_attr_times(dir, lower_dir_dentry->d_inode);
 	fsstack_copy_inode_size(dir, lower_dir_dentry->d_inode);
-	dir->i_nlink = lower_dir_dentry->d_inode->i_nlink;
+	set_nlink(dir, lower_dir_dentry->d_inode->i_nlink);
 
 out:
 	mnt_drop_write(lower_path.mnt);
