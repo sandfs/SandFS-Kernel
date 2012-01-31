@@ -12,7 +12,7 @@
 #include "wrapfs.h"
 
 static int wrapfs_create(struct inode *dir, struct dentry *dentry,
-			 int mode, struct nameidata *nd)
+			 umode_t mode, struct nameidata *nd)
 {
 	int err = 0;
 	struct dentry *lower_dentry;
@@ -170,7 +170,7 @@ out_unlock:
 	return err;
 }
 
-static int wrapfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
+static int wrapfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
 	int err = 0;
 	struct dentry *lower_dentry;
@@ -238,7 +238,7 @@ out_unlock:
 	return err;
 }
 
-static int wrapfs_mknod(struct inode *dir, struct dentry *dentry, int mode,
+static int wrapfs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
 			dev_t dev)
 {
 	int err = 0;
