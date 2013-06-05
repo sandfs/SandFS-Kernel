@@ -16,23 +16,20 @@
  *          0: tell VFS to invalidate dentry
  *          1: dentry is valid
  */
-static int wrapfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
+static int wrapfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
-	struct path lower_path, saved_path;
+	struct path lower_path;
 	struct dentry *lower_dentry;
 	int err = 1;
 
-	if (nd && nd->flags & LOOKUP_RCU)
+	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
 	if (!lower_dentry->d_op || !lower_dentry->d_op->d_revalidate)
 		goto out;
-	pathcpy(&saved_path, &nd->path);
-	pathcpy(&nd->path, &lower_path);
-	err = lower_dentry->d_op->d_revalidate(lower_dentry, nd);
-	pathcpy(&nd->path, &saved_path);
+	err = lower_dentry->d_op->d_revalidate(lower_dentry, flags);
 out:
 	wrapfs_put_lower_path(dentry, &lower_path);
 	return err;
