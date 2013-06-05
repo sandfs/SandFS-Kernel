@@ -141,11 +141,6 @@ static int wrapfs_mmap(struct file *file, struct vm_area_struct *vma)
 			goto out;
 		}
 		saved_vm_ops = vma->vm_ops; /* save: came from lower ->mmap */
-		err = vm_munmap(vma->vm_start, vma->vm_end - vma->vm_start);
-		if (err) {
-			printk(KERN_ERR "wrapfs: vm_munmap failed %d\n", err);
-			goto out;
-		}
 	}
 
 	/*
