@@ -185,8 +185,7 @@ static int wrapfs_open(struct inode *inode, struct file *file)
 
 	/* open lower object and link wrapfs's file struct to lower's */
 	wrapfs_get_lower_path(file->f_path.dentry, &lower_path);
-	lower_file = dentry_open(lower_path.dentry, lower_path.mnt,
-				 file->f_flags, current_cred());
+	lower_file = dentry_open(&lower_path, file->f_flags, current_cred());
 	if (IS_ERR(lower_file)) {
 		err = PTR_ERR(lower_file);
 		lower_file = wrapfs_lower_file(file);
