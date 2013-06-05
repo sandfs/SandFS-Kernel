@@ -70,7 +70,7 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 		err = PTR_ERR(inode);
 		goto out_sput;
 	}
-	sb->s_root = d_alloc_root(inode);
+	sb->s_root = d_make_root(inode);
 	if (!sb->s_root) {
 		err = -ENOMEM;
 		goto out_iput;
@@ -90,7 +90,7 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 
 	/*
 	 * No need to call interpose because we already have a positive
-	 * dentry, which was instantiated by d_alloc_root.  Just need to
+	 * dentry, which was instantiated by d_make_root.  Just need to
 	 * d_rehash it.
 	 */
 	d_rehash(sb->s_root);
