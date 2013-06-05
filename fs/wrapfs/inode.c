@@ -33,7 +33,6 @@ static int wrapfs_create(struct inode *dir, struct dentry *dentry,
 		goto out;
 	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode,
 			 &lower_nd);
-	release_lower_nd(&lower_nd, err);
 	if (err)
 		goto out;
 	/* XXX; should we pass lower_nd.path instead of lower_path? */

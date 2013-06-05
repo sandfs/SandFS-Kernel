@@ -57,68 +57,29 @@ int new_dentry_private_data(struct dentry *dentry)
 /*
  * Initialize a nameidata structure (the intent part) we can pass to a lower
  * file system.  Returns 0 on success or -error (only -ENOMEM possible).
- * Inside that nd structure, this function may also return an allocated
- * struct file (for open intents).  The caller, when done with this nd, must
- * kfree the intent file (using release_lower_nd).
- *
- * XXX: this code, and the callers of this code, should be redone using
- * vfs_path_lookup() when (1) the nameidata structure is refactored into a
- * separate intent-structure, and (2) open_namei() is broken into a VFS-only
- * function and a method that other file systems can call.
  */
 int init_lower_nd(struct nameidata *nd, unsigned int flags)
 {
 	int err = 0;
-#ifdef ALLOC_LOWER_ND_FILE
-	/*
-	 * XXX: one day we may need to have the lower file system return an
-	 * open file for us (esp. for nfs4).
-	 */
-	struct file *file;
-#endif /* ALLOC_LOWER_ND_FILE */
 
 	memset(nd, 0, sizeof(struct nameidata));
 	if (!flags)
-		return err;
+		goto out;
 
 	switch (flags) {
 	case LOOKUP_CREATE:
-		nd->intent.open.flags |= O_CREAT;
-		/* fall through: shared code for create/open cases */
 	case LOOKUP_OPEN:
 		nd->flags = flags;
-		nd->intent.open.flags |= (FMODE_READ | FMODE_WRITE);
-#ifdef ALLOC_LOWER_ND_FILE
-		file = kzalloc(sizeof(struct file), GFP_KERNEL);
-		if (!file) {
-			err = -ENOMEM;
-			break; /* exit switch statement and thus return */
-		}
-		nd->intent.open.file = file;
-#endif /* ALLOC_LOWER_ND_FILE */
 		break;
 	default:
-		/*
-		 * We should never get here, for now.
-		 * We can add new cases here later on.
-		 */
+		/* We should never get here, for now */
 		pr_debug("wrapfs: unknown nameidata flag 0x%x\n", flags);
 		BUG();
 		break;
 	}
 
+out:
 	return err;
-}
-
-void release_lower_nd(struct nameidata *nd, int err)
-{
-	if (!nd->intent.open.file)
-		return;
-	else if (!err)
-		release_open_intent(nd);
-#ifdef ALLOC_LOWER_ND_FILE
-	kfree(nd->intent.open.file);
-#endif /* ALLOC_LOWER_ND_FILE */
 }
 
 static int wrapfs_inode_test(struct inode *inode, void *candidate_lower_inode)
