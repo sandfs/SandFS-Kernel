@@ -154,7 +154,6 @@ static int wrapfs_mmap(struct file *file, struct vm_area_struct *vma)
 	 */
 	file_accessed(file);
 	vma->vm_ops = &wrapfs_vm_ops;
-	vma->vm_flags |= VM_CAN_NONLINEAR;
 
 	file->f_mapping->a_ops = &wrapfs_aops; /* set our aops */
 	if (!WRAPFS_F(file)->lower_vm_ops) /* save for our ->fault */
