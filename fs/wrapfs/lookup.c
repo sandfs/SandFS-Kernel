@@ -220,7 +220,8 @@ out:
  * Returns: NULL (ok), ERR_PTR if an error occurred.
  * Fills in lower_parent_path with <dentry,mnt> on success.
  */
-static struct dentry *__wrapfs_lookup(struct dentry *dentry, int flags,
+static struct dentry *__wrapfs_lookup(struct dentry *dentry,
+				      unsigned int flags,
 				      struct path *lower_parent_path)
 {
 	int err = 0;
@@ -296,13 +297,12 @@ out:
 }
 
 struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
-			     struct nameidata *nd)
+			     unsigned int flags)
 {
 	struct dentry *ret, *parent;
 	struct path lower_parent_path;
 	int err = 0;
 
-	BUG_ON(!nd);
 	parent = dget_parent(dentry);
 
 	wrapfs_get_lower_path(parent, &lower_parent_path);
@@ -313,7 +313,7 @@ struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
 		ret = ERR_PTR(err);
 		goto out;
 	}
-	ret = __wrapfs_lookup(dentry, nd->flags, &lower_parent_path);
+	ret = __wrapfs_lookup(dentry, flags, &lower_parent_path);
 	if (IS_ERR(ret))
 		goto out;
 	if (ret)
