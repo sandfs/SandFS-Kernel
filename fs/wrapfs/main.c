@@ -131,7 +131,7 @@ static struct file_system_type wrapfs_fs_type = {
 	.name		= WRAPFS_NAME,
 	.mount		= wrapfs_mount,
 	.kill_sb	= generic_shutdown_super,
-	.fs_flags	= FS_REVAL_DOT,
+	.fs_flags	= 0,
 };
 
 static int __init init_wrapfs_fs(void)
