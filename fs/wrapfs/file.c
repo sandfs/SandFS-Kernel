@@ -77,6 +77,10 @@ static long wrapfs_unlocked_ioctl(struct file *file, unsigned int cmd,
 	if (lower_file->f_op->unlocked_ioctl)
 		err = lower_file->f_op->unlocked_ioctl(lower_file, cmd, arg);
 
+	/* some ioctls can change inode attributes (EXT2_IOC_SETFLAGS) */
+	if (!err)
+		fsstack_copy_attr_all(file->f_path.dentry->d_inode,
+				      lower_file->f_path.dentry->d_inode);
 out:
 	return err;
 }
