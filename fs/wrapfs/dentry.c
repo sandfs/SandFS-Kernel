@@ -27,7 +27,7 @@ static int wrapfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
-	if (!lower_dentry->d_op || !lower_dentry->d_op->d_revalidate)
+	if (!(lower_dentry->d_flags & DCACHE_OP_REVALIDATE))
 		goto out;
 	err = lower_dentry->d_op->d_revalidate(lower_dentry, flags);
 out:
