@@ -48,14 +48,14 @@ static ssize_t wrapfs_write(struct file *file, const char __user *buf,
 	return err;
 }
 
-static int wrapfs_readdir(struct file *file, void *dirent, filldir_t filldir)
+static int wrapfs_readdir(struct file *file, struct dir_context *ctx)
 {
 	int err = 0;
 	struct file *lower_file = NULL;
 	struct dentry *dentry = file->f_path.dentry;
 
 	lower_file = wrapfs_lower_file(file);
-	err = vfs_readdir(lower_file, filldir, dirent);
+	err = iterate_dir(lower_file, ctx);
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
 		fsstack_copy_attr_atime(dentry->d_inode,
@@ -282,7 +282,7 @@ const struct file_operations wrapfs_main_fops = {
 const struct file_operations wrapfs_dir_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= generic_read_dir,
-	.readdir	= wrapfs_readdir,
+	.iterate	= wrapfs_readdir,
 	.unlocked_ioctl	= wrapfs_unlocked_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl	= wrapfs_compat_ioctl,
