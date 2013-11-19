@@ -23,7 +23,7 @@ static ssize_t wrapfs_read(struct file *file, char __user *buf,
 	/* update our inode atime upon a successful lower read */
 	if (err >= 0)
 		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 
 	return err;
 }
@@ -40,9 +40,9 @@ static ssize_t wrapfs_write(struct file *file, const char __user *buf,
 	/* update our inode times+sizes upon a successful lower write */
 	if (err >= 0) {
 		fsstack_copy_inode_size(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 		fsstack_copy_attr_times(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 	}
 
 	return err;
@@ -59,7 +59,7 @@ static int wrapfs_readdir(struct file *file, struct dir_context *ctx)
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
 		fsstack_copy_attr_atime(dentry->d_inode,
-					lower_file->f_path.dentry->d_inode);
+					file_inode(lower_file));
 	return err;
 }
 
@@ -79,8 +79,8 @@ static long wrapfs_unlocked_ioctl(struct file *file, unsigned int cmd,
 
 	/* some ioctls can change inode attributes (EXT2_IOC_SETFLAGS) */
 	if (!err)
-		fsstack_copy_attr_all(file->f_path.dentry->d_inode,
-				      lower_file->f_path.dentry->d_inode);
+		fsstack_copy_attr_all(file_inode(file),
+				      file_inode(lower_file));
 out:
 	return err;
 }
