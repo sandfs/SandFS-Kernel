@@ -437,11 +437,32 @@ out_err:
 	return err;
 }
 
+static int wrapfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
+			  struct kstat *stat)
+{
+	int err;
+	struct kstat lower_stat;
+	struct path lower_path;
+
+	wrapfs_get_lower_path(dentry, &lower_path);
+	err = vfs_getattr(&lower_path, &lower_stat);
+	if (err)
+		goto out;
+	fsstack_copy_attr_all(dentry->d_inode,
+			      lower_path.dentry->d_inode);
+	generic_fillattr(dentry->d_inode, stat);
+	stat->blocks = lower_stat.blocks;
+out:
+	wrapfs_put_lower_path(dentry, &lower_path);
+	return err;
+}
+
 const struct inode_operations wrapfs_symlink_iops = {
 	.readlink	= wrapfs_readlink,
 	.permission	= wrapfs_permission,
 	.follow_link	= wrapfs_follow_link,
 	.setattr	= wrapfs_setattr,
+	.getattr	= wrapfs_getattr,
 	.put_link	= wrapfs_put_link,
 };
 
@@ -457,9 +478,11 @@ const struct inode_operations wrapfs_dir_iops = {
 	.rename		= wrapfs_rename,
 	.permission	= wrapfs_permission,
 	.setattr	= wrapfs_setattr,
+	.getattr	= wrapfs_getattr,
 };
 
 const struct inode_operations wrapfs_main_iops = {
 	.permission	= wrapfs_permission,
 	.setattr	= wrapfs_setattr,
+	.getattr	= wrapfs_getattr,
 };
