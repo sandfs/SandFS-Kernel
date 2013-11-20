@@ -13422,12 +13422,12 @@ F:	include/linux/workqueue.h
 F:	kernel/workqueue.c
 F:	Documentation/core-api/workqueue.rst
 
-WRAPFS
+WRAP FILE SYSTEM
 P:	Erez Zadok
 M:	ezk@cs.sunysb.edu
 L:	wrapfs@filesystems.org
 W:	http://wrapfs.filesystems.org/
-T:	git git.kernel.org/pub/scm/linux/kernel/git/ezk/wrapfs.git
+T:	git git://git.fsl.cs.sunysb.edu/wrapfs-latest.git
 S:	Maintained
 F:	Documentation/filesystems/wrapfs.txt
 F:	fs/wrapfs/
