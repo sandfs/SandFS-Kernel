@@ -54,34 +54,6 @@ int new_dentry_private_data(struct dentry *dentry)
 	return 0;
 }
 
-/*
- * Initialize a nameidata structure (the intent part) we can pass to a lower
- * file system.  Returns 0 on success or -error (only -ENOMEM possible).
- */
-int init_lower_nd(struct nameidata *nd, unsigned int flags)
-{
-	int err = 0;
-
-	memset(nd, 0, sizeof(struct nameidata));
-	if (!flags)
-		goto out;
-
-	switch (flags) {
-	case LOOKUP_CREATE:
-	case LOOKUP_OPEN:
-		nd->flags = flags;
-		break;
-	default:
-		/* We should never get here, for now */
-		pr_debug("wrapfs: unknown nameidata flag 0x%x\n", flags);
-		BUG();
-		break;
-	}
-
-out:
-	return err;
-}
-
 static int wrapfs_inode_test(struct inode *inode, void *candidate_lower_inode)
 {
 	struct inode *current_lower_inode = wrapfs_lower_inode(inode);

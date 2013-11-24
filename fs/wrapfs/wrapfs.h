@@ -52,7 +52,6 @@ extern int wrapfs_init_dentry_cache(void);
 extern void wrapfs_destroy_dentry_cache(void);
 extern int new_dentry_private_data(struct dentry *dentry);
 extern void free_dentry_private_data(struct dentry *dentry);
-extern int init_lower_nd(struct nameidata *nd, unsigned int flags);
 extern struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
 				    unsigned int flags);
 extern struct inode *wrapfs_iget(struct super_block *sb,
