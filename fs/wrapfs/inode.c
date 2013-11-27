@@ -340,15 +340,6 @@ out:
 	return NULL;
 }
 
-/* this @nd *IS* still used */
-static void wrapfs_put_link(struct dentry *dentry, struct nameidata *nd,
-			    void *cookie)
-{
-	char *buf = nd_get_link(nd);
-	if (!IS_ERR(buf))	/* free the char* */
-		kfree(buf);
-}
-
 static int wrapfs_permission(struct inode *inode, int mask)
 {
 	struct inode *lower_inode;
@@ -463,7 +454,7 @@ const struct inode_operations wrapfs_symlink_iops = {
 	.follow_link	= wrapfs_follow_link,
 	.setattr	= wrapfs_setattr,
 	.getattr	= wrapfs_getattr,
-	.put_link	= wrapfs_put_link,
+	.put_link	= kfree_put_link,
 };
 
 const struct inode_operations wrapfs_dir_iops = {
