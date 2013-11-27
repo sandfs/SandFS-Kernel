@@ -14,7 +14,7 @@
 static int wrapfs_create(struct inode *dir, struct dentry *dentry,
 			 umode_t mode, bool want_excl)
 {
-	int err = 0;
+	int err;
 	struct dentry *lower_dentry;
 	struct dentry *lower_parent_dentry = NULL;
 	struct path lower_path;
@@ -118,7 +118,7 @@ out:
 static int wrapfs_symlink(struct inode *dir, struct dentry *dentry,
 			  const char *symname)
 {
-	int err = 0;
+	int err;
 	struct dentry *lower_dentry;
 	struct dentry *lower_parent_dentry = NULL;
 	struct path lower_path;
@@ -144,7 +144,7 @@ out:
 
 static int wrapfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
-	int err = 0;
+	int err;
 	struct dentry *lower_dentry;
 	struct dentry *lower_parent_dentry = NULL;
 	struct path lower_path;
@@ -203,7 +203,7 @@ out:
 static int wrapfs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
 			dev_t dev)
 {
-	int err = 0;
+	int err;
 	struct dentry *lower_dentry;
 	struct dentry *lower_parent_dentry = NULL;
 	struct path lower_path;
@@ -361,7 +361,7 @@ static int wrapfs_permission(struct inode *inode, int mask)
 
 static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 {
-	int err = 0;
+	int err;
 	struct dentry *lower_dentry;
 	struct inode *inode;
 	struct inode *lower_inode;

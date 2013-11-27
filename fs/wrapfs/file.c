@@ -31,7 +31,8 @@ static ssize_t wrapfs_read(struct file *file, char __user *buf,
 static ssize_t wrapfs_write(struct file *file, const char __user *buf,
 			    size_t count, loff_t *ppos)
 {
-	int err = 0;
+	int err;
+
 	struct file *lower_file;
 	struct dentry *dentry = file->f_path.dentry;
 
@@ -50,7 +51,7 @@ static ssize_t wrapfs_write(struct file *file, const char __user *buf,
 
 static int wrapfs_readdir(struct file *file, struct dir_context *ctx)
 {
-	int err = 0;
+	int err;
 	struct file *lower_file = NULL;
 	struct dentry *dentry = file->f_path.dentry;
 

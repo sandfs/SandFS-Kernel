@@ -271,9 +271,9 @@ out:
 struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
 			     unsigned int flags)
 {
+	int err;
 	struct dentry *ret, *parent;
 	struct path lower_parent_path;
-	int err = 0;
 
 	parent = dget_parent(dentry);
 
