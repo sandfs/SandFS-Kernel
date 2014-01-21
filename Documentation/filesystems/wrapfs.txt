@@ -7,28 +7,32 @@ Web Site: <http://wrapfs.filesystems.org/>
 MOTIVATION:
 
 Wrapfs is a small null-layer stackable file system, similar to BSD's Nullfs.
-Wrapfs is small, under 1800 lines of code.  Compare that to, say, eCryptfs
-and Unionfs, each of which are over 10,000 LoC.  As such, Wrapfs is simple
-and easy to read and understand.  Wrapfs is useful for several reasons:
+Wrapfs is small, under 1,800 lines of code.  Compare that to, say, eCryptfs
+(in mainline since 2.6.19) and Unionfs, each of which are over 10,000 LoC.
+As such, Wrapfs is simple, easy to read and understand, and very easy to
+code-review.  Wrapfs is useful for several reasons:
 
-1. Many people like to experiment with in-kernel file system ideas as a
-   prototype; Wrapfs is an ideal small template from which one could modify
-   the code to create new file system functionality incrementally.
+1. Many people like to experiment with in-kernel file system ideas.  Wrapfs
+   is an ideal small template that one can modify to incrementally create
+   new file system functionalities.
 
 2. As a platform to test and debug generic stacking problems in other Linux
-   stackable file systems (e.g., ecryptfs).
+   stackable file systems (e.g., eCryptfs) more easily.
 
 3. As a way to test VFS enhancements to better support stacking in Linux.
 
-4. Wrapfs is a very useful instructional tool, often used as a starting
-   point for course assignments, for people who want a small example of who
-   the Linux VFS works, or for those who want to learn to write new Linux
-   file systems.
+4. Wrapfs is also a very useful instructional tool, often used as a starting
+   point for course assignments, for people who want a small example of how
+   the Linux VFS works, or for those who want to learn how to write new
+   Linux file systems.
 
 Various versions of Wrapfs appeared as part of the "fistgen" package since
-1994, and have been used by numerous users world-wide.  For a more detailed
-history of Wrapfs, and list of most of its known users, see the section
-marked "HISTORY" below.
+1994, and have been used by numerous users world-wide.  This latest version
+was rewritten entirely from scratch in 2010 and had supported every kernel
+as of 2.6.32.  All versions of wrapfs have been thoroughly tested using LTP,
+FSX, racer, and other test-suites.  Wrapfs code uses the latest VFS API
+changes of the corresponding kernel.  For a more detailed history of Wrapfs,
+and list of most of its known users, see the section marked "HISTORY" below.
 
 ------------------------------------------------------------------------------
 OPERATION:
