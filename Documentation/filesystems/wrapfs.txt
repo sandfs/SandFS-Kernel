@@ -26,6 +26,9 @@ code-review.  Wrapfs is useful for several reasons:
    the Linux VFS works, or for those who want to learn how to write new
    Linux file systems.
 
+5. As an alternative to bind mounts.  Wrapfs acts similarly to BSD's
+   loopback mount file system (lofs).
+
 Various versions of Wrapfs appeared as part of the "fistgen" package since
 1994, and have been used by numerous users world-wide.  This latest version
 was rewritten entirely from scratch in 2010 and had supported every kernel
