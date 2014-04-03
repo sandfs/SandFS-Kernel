@@ -13423,8 +13423,7 @@ F:	kernel/workqueue.c
 F:	Documentation/core-api/workqueue.rst
 
 WRAP FILE SYSTEM
-P:	Erez Zadok
-M:	ezk@cs.sunysb.edu
+M:	Erez Zadok <ezk@cs.sunysb.edu>
 L:	wrapfs@filesystems.org
 W:	http://wrapfs.filesystems.org/
 T:	git git://git.fsl.cs.sunysb.edu/wrapfs-latest.git
