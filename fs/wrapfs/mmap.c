@@ -39,6 +39,39 @@ static int wrapfs_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	return err;
 }
 
+static int wrapfs_page_mkwrite(struct vm_area_struct *vma,
+			       struct vm_fault *vmf)
+{
+	int err = 0;
+	struct file *file, *lower_file;
+	const struct vm_operations_struct *lower_vm_ops;
+	struct vm_area_struct lower_vma;
+
+	memcpy(&lower_vma, vma, sizeof(struct vm_area_struct));
+	file = lower_vma.vm_file;
+	lower_vm_ops = WRAPFS_F(file)->lower_vm_ops;
+	BUG_ON(!lower_vm_ops);
+	if (!lower_vm_ops->page_mkwrite)
+		goto out;
+
+	lower_file = wrapfs_lower_file(file);
+	/*
+	 * XXX: vm_ops->page_mkwrite may be called in parallel.
+	 * Because we have to resort to temporarily changing the
+	 * vma->vm_file to point to the lower file, a concurrent
+	 * invocation of wrapfs_page_mkwrite could see a different
+	 * value.  In this workaround, we keep a different copy of the
+	 * vma structure in our stack, so we never expose a different
+	 * value of the vma->vm_file called to us, even temporarily.
+	 * A better fix would be to change the calling semantics of
+	 * ->page_mkwrite to take an explicit file pointer.
+	 */
+	lower_vma.vm_file = lower_file;
+	err = lower_vm_ops->page_mkwrite(&lower_vma, vmf);
+out:
+	return err;
+}
+
 /*
  * XXX: the default address_space_ops for wrapfs is empty.  We cannot set
  * our inode->i_mapping->a_ops to NULL because too many code paths expect
@@ -50,4 +83,5 @@ const struct address_space_operations wrapfs_aops = {
 
 const struct vm_operations_struct wrapfs_vm_ops = {
 	.fault		= wrapfs_fault,
+	.page_mkwrite	= wrapfs_page_mkwrite,
 };
