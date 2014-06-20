@@ -72,13 +72,19 @@ out:
 	return err;
 }
 
-/*
- * XXX: the default address_space_ops for wrapfs is empty.  We cannot set
- * our inode->i_mapping->a_ops to NULL because too many code paths expect
- * the a_ops vector to be non-NULL.
- */
+static ssize_t wrapfs_direct_IO(int rw, struct kiocb *iocb,
+				struct iov_iter *iov, loff_t offset)
+{
+	/*
+	 * This function should never be called directly.  We need it
+	 * to exist, to get past a check in open_check_o_direct(),
+	 * which is called from do_last().
+	 */
+	return -EINVAL;
+}
+
 const struct address_space_operations wrapfs_aops = {
-	/* empty on purpose */
+	.direct_IO = wrapfs_direct_IO,
 };
 
 const struct vm_operations_struct wrapfs_vm_ops = {
