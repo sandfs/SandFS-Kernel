@@ -265,6 +265,48 @@ static int wrapfs_fasync(int fd, struct file *file, int flag)
 	return err;
 }
 
+static ssize_t wrapfs_aio_read(struct kiocb *iocb, const struct iovec *iov,
+			       unsigned long nr_segs, loff_t pos)
+{
+	int err = -EINVAL;
+	struct file *file, *lower_file;
+
+	file = iocb->ki_filp;
+	lower_file = wrapfs_lower_file(file);
+	if (!lower_file->f_op->aio_read)
+		goto out;
+	/*
+	 * It appears safe to rewrite this iocb, because in
+	 * do_io_submit@fs/aio.c, iocb is a just copy from user.
+	 */
+	iocb->ki_filp = lower_file;
+	err = lower_file->f_op->aio_read(iocb, iov, nr_segs, pos);
+	iocb->ki_filp = file;
+out:
+	return err;
+}
+
+static ssize_t wrapfs_aio_write(struct kiocb *iocb, const struct iovec *iov,
+				unsigned long nr_segs, loff_t pos)
+{
+	int err = -EINVAL;
+	struct file *file, *lower_file;
+
+	file = iocb->ki_filp;
+	lower_file = wrapfs_lower_file(file);
+	if (!lower_file->f_op->aio_write)
+		goto out;
+	/*
+	 * It appears safe to rewrite this iocb, because in
+	 * do_io_submit@fs/aio.c, iocb is a just copy from user.
+	 */
+	iocb->ki_filp = lower_file;
+	err = lower_file->f_op->aio_write(iocb, iov, nr_segs, pos);
+	iocb->ki_filp = file;
+out:
+	return err;
+}
+
 const struct file_operations wrapfs_main_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= wrapfs_read,
@@ -279,6 +321,8 @@ const struct file_operations wrapfs_main_fops = {
 	.release	= wrapfs_file_release,
 	.fsync		= wrapfs_fsync,
 	.fasync		= wrapfs_fasync,
+	.aio_read	= wrapfs_aio_read,
+	.aio_write	= wrapfs_aio_write,
 };
 
 /* trimmed directory options */
