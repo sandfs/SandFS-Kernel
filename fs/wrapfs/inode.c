@@ -448,6 +448,94 @@ out:
 	return err;
 }
 
+static int
+wrapfs_setxattr(struct dentry *dentry, const char *name, const void *value,
+		size_t size, int flags)
+{
+	int err; struct dentry *lower_dentry;
+	struct path lower_path;
+
+	wrapfs_get_lower_path(dentry, &lower_path);
+	lower_dentry = lower_path.dentry;
+	if (!lower_dentry->d_inode->i_op ||
+	    !lower_dentry->d_inode->i_op->setxattr) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = lower_dentry->d_inode->i_op->setxattr(lower_dentry,
+						    name, value, size, flags);
+out:
+	wrapfs_put_lower_path(dentry, &lower_path);
+	return err;
+}
+
+static ssize_t
+wrapfs_getxattr(struct dentry *dentry, const char *name, void *buffer,
+		size_t size)
+{
+	int err;
+	struct dentry *lower_dentry;
+	struct path lower_path;
+
+	wrapfs_get_lower_path(dentry, &lower_path);
+	lower_dentry = lower_path.dentry;
+	if (!lower_dentry->d_inode->i_op ||
+	    !lower_dentry->d_inode->i_op->getxattr) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = lower_dentry->d_inode->i_op->getxattr(lower_dentry,
+						    name, buffer, size);
+out:
+	wrapfs_put_lower_path(dentry, &lower_path);
+	return err;
+}
+
+static ssize_t
+wrapfs_listxattr(struct dentry *dentry, char *buffer, size_t buffer_size)
+{
+	int err;
+	struct dentry *lower_dentry;
+	struct path lower_path;
+
+	wrapfs_get_lower_path(dentry, &lower_path);
+	lower_dentry = lower_path.dentry;
+	if (!lower_dentry->d_inode->i_op ||
+	    !lower_dentry->d_inode->i_op->listxattr) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = lower_dentry->d_inode->i_op->listxattr(lower_dentry,
+						     buffer, buffer_size);
+out:
+	wrapfs_put_lower_path(dentry, &lower_path);
+	return err;
+}
+
+static int
+wrapfs_removexattr(struct dentry *dentry, const char *name)
+{
+	int err;
+	struct dentry *lower_dentry;
+	struct path lower_path;
+
+	wrapfs_get_lower_path(dentry, &lower_path);
+	lower_dentry = lower_path.dentry;
+	if (!lower_dentry->d_inode->i_op ||
+	    !lower_dentry->d_inode->i_op->removexattr) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = lower_dentry->d_inode->i_op->removexattr(lower_dentry,
+						       name);
+out:
+	wrapfs_put_lower_path(dentry, &lower_path);
+	return err;
+}
 const struct inode_operations wrapfs_symlink_iops = {
 	.readlink	= wrapfs_readlink,
 	.permission	= wrapfs_permission,
@@ -455,6 +543,10 @@ const struct inode_operations wrapfs_symlink_iops = {
 	.setattr	= wrapfs_setattr,
 	.getattr	= wrapfs_getattr,
 	.put_link	= kfree_put_link,
+	.setxattr	= wrapfs_setxattr,
+	.getxattr	= wrapfs_getxattr,
+	.listxattr	= wrapfs_listxattr,
+	.removexattr	= wrapfs_removexattr,
 };
 
 const struct inode_operations wrapfs_dir_iops = {
@@ -470,10 +562,18 @@ const struct inode_operations wrapfs_dir_iops = {
 	.permission	= wrapfs_permission,
 	.setattr	= wrapfs_setattr,
 	.getattr	= wrapfs_getattr,
+	.setxattr	= wrapfs_setxattr,
+	.getxattr	= wrapfs_getxattr,
+	.listxattr	= wrapfs_listxattr,
+	.removexattr	= wrapfs_removexattr,
 };
 
 const struct inode_operations wrapfs_main_iops = {
 	.permission	= wrapfs_permission,
 	.setattr	= wrapfs_setattr,
 	.getattr	= wrapfs_getattr,
+	.setxattr	= wrapfs_setxattr,
+	.getxattr	= wrapfs_getxattr,
+	.listxattr	= wrapfs_listxattr,
+	.removexattr	= wrapfs_removexattr,
 };
