@@ -242,7 +242,7 @@ static int wrapfs_fsync(struct file *file, loff_t start, loff_t end,
 	struct path lower_path;
 	struct dentry *dentry = file->f_path.dentry;
 
-	err = generic_file_fsync(file, start, end, datasync);
+	err = __generic_file_fsync(file, start, end, datasync);
 	if (err)
 		goto out;
 	lower_file = wrapfs_lower_file(file);
