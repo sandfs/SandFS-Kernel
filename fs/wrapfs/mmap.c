@@ -73,7 +73,7 @@ out:
 }
 
 static ssize_t wrapfs_direct_IO(int rw, struct kiocb *iocb,
-				struct iov_iter *iov, loff_t offset)
+				struct iov_iter *iter, loff_t pos)
 {
 	/*
 	 * This function should never be called directly.  We need it
