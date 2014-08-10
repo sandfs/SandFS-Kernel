@@ -279,9 +279,11 @@ static ssize_t wrapfs_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	 * It appears safe to rewrite this iocb, because in
 	 * do_io_submit@fs/aio.c, iocb is a just copy from user.
 	 */
+	get_file(lower_file); /* prevent lower_file from being released */
 	iocb->ki_filp = lower_file;
 	err = lower_file->f_op->aio_read(iocb, iov, nr_segs, pos);
 	iocb->ki_filp = file;
+	fput(lower_file);
 out:
 	return err;
 }
@@ -300,9 +302,11 @@ static ssize_t wrapfs_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	 * It appears safe to rewrite this iocb, because in
 	 * do_io_submit@fs/aio.c, iocb is a just copy from user.
 	 */
+	get_file(lower_file); /* prevent lower_file from being released */
 	iocb->ki_filp = lower_file;
 	err = lower_file->f_op->aio_write(iocb, iov, nr_segs, pos);
 	iocb->ki_filp = file;
+	fput(lower_file);
 out:
 	return err;
 }
