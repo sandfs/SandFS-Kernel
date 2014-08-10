@@ -329,6 +329,55 @@ out:
 	return err;
 }
 
+/*
+ * Wrapfs read_iter, redirect modified iocb to lower read_iter
+ */
+ssize_t
+wrapfs_read_iter(struct kiocb *iocb, struct iov_iter *iter)
+{
+	int err;
+	struct file *file = iocb->ki_filp, *lower_file;
+
+	lower_file = wrapfs_lower_file(file);
+	if (!lower_file->f_op->read_iter) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	get_file(lower_file); /* prevent lower_file from being released */
+	iocb->ki_filp = lower_file;
+	err = lower_file->f_op->read_iter(iocb, iter);
+	/* ? wait IO finish to update atime as ecryptfs ? */
+	iocb->ki_filp = file;
+	fput(lower_file);
+out:
+	return err;
+}
+
+/*
+ * Wrapfs write_iter, redirect modified iocb to lower write_iter
+ */
+ssize_t
+wrapfs_write_iter(struct kiocb *iocb, struct iov_iter *iter)
+{
+	int err;
+	struct file *file = iocb->ki_filp, *lower_file;
+
+	lower_file = wrapfs_lower_file(file);
+	if (!lower_file->f_op->write_iter) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	get_file(lower_file); /* prevent lower_file from being released */
+	iocb->ki_filp = lower_file;
+	err = lower_file->f_op->write_iter(iocb, iter);
+	iocb->ki_filp = file;
+	fput(lower_file);
+out:
+	return err;
+}
+
 const struct file_operations wrapfs_main_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= wrapfs_read,
@@ -345,6 +394,8 @@ const struct file_operations wrapfs_main_fops = {
 	.fasync		= wrapfs_fasync,
 	.aio_read	= wrapfs_aio_read,
 	.aio_write	= wrapfs_aio_write,
+	.read_iter	= wrapfs_read_iter,
+	.write_iter	= wrapfs_write_iter,
 };
 
 /* trimmed directory options */
