@@ -284,6 +284,7 @@ static ssize_t wrapfs_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	err = lower_file->f_op->aio_read(iocb, iov, nr_segs, pos);
 	iocb->ki_filp = file;
 	fput(lower_file);
+	/* XXX: need to update upper inode atime as needed */
 out:
 	return err;
 }
@@ -307,6 +308,7 @@ static ssize_t wrapfs_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	err = lower_file->f_op->aio_write(iocb, iov, nr_segs, pos);
 	iocb->ki_filp = file;
 	fput(lower_file);
+	/* XXX: need to update upper inode times/sizes as needed */
 out:
 	return err;
 }
@@ -351,9 +353,9 @@ wrapfs_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 	get_file(lower_file); /* prevent lower_file from being released */
 	iocb->ki_filp = lower_file;
 	err = lower_file->f_op->read_iter(iocb, iter);
-	/* ? wait IO finish to update atime as ecryptfs ? */
 	iocb->ki_filp = file;
 	fput(lower_file);
+	/* XXX: need to update upper inode atime as needed */
 out:
 	return err;
 }
@@ -378,6 +380,7 @@ wrapfs_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 	err = lower_file->f_op->write_iter(iocb, iter);
 	iocb->ki_filp = file;
 	fput(lower_file);
+	/* XXX: need to update upper inode times/sizes as needed */
 out:
 	return err;
 }
