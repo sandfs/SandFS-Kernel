@@ -284,7 +284,10 @@ static ssize_t wrapfs_aio_read(struct kiocb *iocb, const struct iovec *iov,
 	err = lower_file->f_op->aio_read(iocb, iov, nr_segs, pos);
 	iocb->ki_filp = file;
 	fput(lower_file);
-	/* XXX: need to update upper inode atime as needed */
+	/* update upper inode atime as needed */
+	if (err >= 0 || err == -EIOCBQUEUED)
+		fsstack_copy_attr_atime(file->f_path.dentry->d_inode,
+					file_inode(lower_file));
 out:
 	return err;
 }
@@ -308,7 +311,13 @@ static ssize_t wrapfs_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	err = lower_file->f_op->aio_write(iocb, iov, nr_segs, pos);
 	iocb->ki_filp = file;
 	fput(lower_file);
-	/* XXX: need to update upper inode times/sizes as needed */
+	/* update upper inode times/sizes as needed */
+	if (err >= 0 || err == -EIOCBQUEUED) {
+		fsstack_copy_inode_size(file->f_path.dentry->d_inode,
+					file_inode(lower_file));
+		fsstack_copy_attr_times(file->f_path.dentry->d_inode,
+					file_inode(lower_file));
+	}
 out:
 	return err;
 }
@@ -355,7 +364,10 @@ wrapfs_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 	err = lower_file->f_op->read_iter(iocb, iter);
 	iocb->ki_filp = file;
 	fput(lower_file);
-	/* XXX: need to update upper inode atime as needed */
+	/* update upper inode atime as needed */
+	if (err >= 0 || err == -EIOCBQUEUED)
+		fsstack_copy_attr_atime(file->f_path.dentry->d_inode,
+					file_inode(lower_file));
 out:
 	return err;
 }
@@ -380,7 +392,13 @@ wrapfs_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 	err = lower_file->f_op->write_iter(iocb, iter);
 	iocb->ki_filp = file;
 	fput(lower_file);
-	/* XXX: need to update upper inode times/sizes as needed */
+	/* update upper inode times/sizes as needed */
+	if (err >= 0 || err == -EIOCBQUEUED) {
+		fsstack_copy_inode_size(file->f_path.dentry->d_inode,
+					file_inode(lower_file));
+		fsstack_copy_attr_times(file->f_path.dentry->d_inode,
+					file_inode(lower_file));
+	}
 out:
 	return err;
 }
