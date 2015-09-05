@@ -265,63 +265,6 @@ static int wrapfs_fasync(int fd, struct file *file, int flag)
 	return err;
 }
 
-static ssize_t wrapfs_aio_read(struct kiocb *iocb, const struct iovec *iov,
-			       unsigned long nr_segs, loff_t pos)
-{
-	int err = -EINVAL;
-	struct file *file, *lower_file;
-
-	file = iocb->ki_filp;
-	lower_file = wrapfs_lower_file(file);
-	if (!lower_file->f_op->aio_read)
-		goto out;
-	/*
-	 * It appears safe to rewrite this iocb, because in
-	 * do_io_submit@fs/aio.c, iocb is a just copy from user.
-	 */
-	get_file(lower_file); /* prevent lower_file from being released */
-	iocb->ki_filp = lower_file;
-	err = lower_file->f_op->aio_read(iocb, iov, nr_segs, pos);
-	iocb->ki_filp = file;
-	fput(lower_file);
-	/* update upper inode atime as needed */
-	if (err >= 0 || err == -EIOCBQUEUED)
-		fsstack_copy_attr_atime(file->f_path.dentry->d_inode,
-					file_inode(lower_file));
-out:
-	return err;
-}
-
-static ssize_t wrapfs_aio_write(struct kiocb *iocb, const struct iovec *iov,
-				unsigned long nr_segs, loff_t pos)
-{
-	int err = -EINVAL;
-	struct file *file, *lower_file;
-
-	file = iocb->ki_filp;
-	lower_file = wrapfs_lower_file(file);
-	if (!lower_file->f_op->aio_write)
-		goto out;
-	/*
-	 * It appears safe to rewrite this iocb, because in
-	 * do_io_submit@fs/aio.c, iocb is a just copy from user.
-	 */
-	get_file(lower_file); /* prevent lower_file from being released */
-	iocb->ki_filp = lower_file;
-	err = lower_file->f_op->aio_write(iocb, iov, nr_segs, pos);
-	iocb->ki_filp = file;
-	fput(lower_file);
-	/* update upper inode times/sizes as needed */
-	if (err >= 0 || err == -EIOCBQUEUED) {
-		fsstack_copy_inode_size(file->f_path.dentry->d_inode,
-					file_inode(lower_file));
-		fsstack_copy_attr_times(file->f_path.dentry->d_inode,
-					file_inode(lower_file));
-	}
-out:
-	return err;
-}
-
 /*
  * Wrapfs cannot use generic_file_llseek as ->llseek, because it would
  * only set the offset of the upper file.  So we have to implement our
@@ -417,8 +360,6 @@ const struct file_operations wrapfs_main_fops = {
 	.release	= wrapfs_file_release,
 	.fsync		= wrapfs_fsync,
 	.fasync		= wrapfs_fasync,
-	.aio_read	= wrapfs_aio_read,
-	.aio_write	= wrapfs_aio_write,
 	.read_iter	= wrapfs_read_iter,
 	.write_iter	= wrapfs_write_iter,
 };
