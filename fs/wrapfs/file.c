@@ -22,7 +22,7 @@ static ssize_t wrapfs_read(struct file *file, char __user *buf,
 	err = vfs_read(lower_file, buf, count, ppos);
 	/* update our inode atime upon a successful lower read */
 	if (err >= 0)
-		fsstack_copy_attr_atime(dentry->d_inode,
+		fsstack_copy_attr_atime(d_inode(dentry),
 					file_inode(lower_file));
 
 	return err;
@@ -40,9 +40,9 @@ static ssize_t wrapfs_write(struct file *file, const char __user *buf,
 	err = vfs_write(lower_file, buf, count, ppos);
 	/* update our inode times+sizes upon a successful lower write */
 	if (err >= 0) {
-		fsstack_copy_inode_size(dentry->d_inode,
+		fsstack_copy_inode_size(d_inode(dentry),
 					file_inode(lower_file));
-		fsstack_copy_attr_times(dentry->d_inode,
+		fsstack_copy_attr_times(d_inode(dentry),
 					file_inode(lower_file));
 	}
 
@@ -59,7 +59,7 @@ static int wrapfs_readdir(struct file *file, struct dir_context *ctx)
 	err = iterate_dir(lower_file, ctx);
 	file->f_pos = lower_file->f_pos;
 	if (err >= 0)		/* copy the atime */
-		fsstack_copy_attr_atime(dentry->d_inode,
+		fsstack_copy_attr_atime(d_inode(dentry),
 					file_inode(lower_file));
 	return err;
 }
@@ -309,7 +309,7 @@ wrapfs_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 	fput(lower_file);
 	/* update upper inode atime as needed */
 	if (err >= 0 || err == -EIOCBQUEUED)
-		fsstack_copy_attr_atime(file->f_path.dentry->d_inode,
+		fsstack_copy_attr_atime(d_inode(file->f_path.dentry),
 					file_inode(lower_file));
 out:
 	return err;
@@ -337,9 +337,9 @@ wrapfs_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 	fput(lower_file);
 	/* update upper inode times/sizes as needed */
 	if (err >= 0 || err == -EIOCBQUEUED) {
-		fsstack_copy_inode_size(file->f_path.dentry->d_inode,
+		fsstack_copy_inode_size(d_inode(file->f_path.dentry),
 					file_inode(lower_file));
-		fsstack_copy_attr_times(file->f_path.dentry->d_inode,
+		fsstack_copy_attr_times(d_inode(file->f_path.dentry),
 					file_inode(lower_file));
 	}
 out:

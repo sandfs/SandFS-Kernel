@@ -159,7 +159,7 @@ int wrapfs_interpose(struct dentry *dentry, struct super_block *sb,
 	struct inode *lower_inode;
 	struct super_block *lower_sb;
 
-	lower_inode = lower_path->dentry->d_inode;
+	lower_inode = d_inode(lower_path->dentry);
 	lower_sb = wrapfs_lower_super(sb);
 
 	/* check that the lower file system didn't cross a mount point */
@@ -290,12 +290,12 @@ struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
 		goto out;
 	if (ret)
 		dentry = ret;
-	if (dentry->d_inode)
-		fsstack_copy_attr_times(dentry->d_inode,
-					wrapfs_lower_inode(dentry->d_inode));
+	if (d_inode(dentry))
+		fsstack_copy_attr_times(d_inode(dentry),
+					wrapfs_lower_inode(d_inode(dentry)));
 	/* update parent directory's atime */
-	fsstack_copy_attr_atime(parent->d_inode,
-				wrapfs_lower_inode(parent->d_inode));
+	fsstack_copy_attr_atime(d_inode(parent),
+				wrapfs_lower_inode(d_inode(parent)));
 
 out:
 	wrapfs_put_lower_path(parent, &lower_parent_path);
