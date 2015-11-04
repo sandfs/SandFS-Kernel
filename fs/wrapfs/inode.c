@@ -455,14 +455,15 @@ wrapfs_setxattr(struct dentry *dentry, const char *name, const void *value,
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
-	if (!d_inode(lower_dentry)->i_op ||
-	    !d_inode(lower_dentry)->i_op->setxattr) {
-		err = -EINVAL;
+	if (!d_inode(lower_dentry)->i_op->setxattr) {
+		err = -EOPNOTSUPP;
 		goto out;
 	}
-
-	err = d_inode(lower_dentry)->i_op->setxattr(lower_dentry,
-						    name, value, size, flags);
+	err = vfs_setxattr(lower_dentry, name, value, size, flags);
+	if (err)
+		goto out;
+	fsstack_copy_attr_all(d_inode(dentry),
+			      d_inode(lower_path.dentry));
 out:
 	wrapfs_put_lower_path(dentry, &lower_path);
 	return err;
@@ -478,14 +479,15 @@ wrapfs_getxattr(struct dentry *dentry, const char *name, void *buffer,
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
-	if (!d_inode(lower_dentry)->i_op ||
-	    !d_inode(lower_dentry)->i_op->getxattr) {
-		err = -EINVAL;
+	if (!d_inode(lower_dentry)->i_op->getxattr) {
+		err = -EOPNOTSUPP;
 		goto out;
 	}
-
-	err = d_inode(lower_dentry)->i_op->getxattr(lower_dentry,
-						    name, buffer, size);
+	err = vfs_getxattr(lower_dentry, name, buffer, size);
+	if (err)
+		goto out;
+	fsstack_copy_attr_atime(d_inode(dentry),
+				d_inode(lower_path.dentry));
 out:
 	wrapfs_put_lower_path(dentry, &lower_path);
 	return err;
@@ -500,14 +502,15 @@ wrapfs_listxattr(struct dentry *dentry, char *buffer, size_t buffer_size)
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
-	if (!d_inode(lower_dentry)->i_op ||
-	    !d_inode(lower_dentry)->i_op->listxattr) {
-		err = -EINVAL;
+	if (!d_inode(lower_dentry)->i_op->listxattr) {
+		err = -EOPNOTSUPP;
 		goto out;
 	}
-
-	err = d_inode(lower_dentry)->i_op->listxattr(lower_dentry,
-						     buffer, buffer_size);
+	err = vfs_listxattr(lower_dentry, buffer, buffer_size);
+	if (err)
+		goto out;
+	fsstack_copy_attr_atime(d_inode(dentry),
+				d_inode(lower_path.dentry));
 out:
 	wrapfs_put_lower_path(dentry, &lower_path);
 	return err;
@@ -527,9 +530,11 @@ wrapfs_removexattr(struct dentry *dentry, const char *name)
 		err = -EINVAL;
 		goto out;
 	}
-
-	err = d_inode(lower_dentry)->i_op->removexattr(lower_dentry,
-						       name);
+	err = vfs_removexattr(lower_dentry, name);
+	if (err)
+		goto out;
+	fsstack_copy_attr_all(d_inode(dentry),
+			      d_inode(lower_path.dentry));
 out:
 	wrapfs_put_lower_path(dentry, &lower_path);
 	return err;

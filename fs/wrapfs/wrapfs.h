@@ -25,6 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <linux/xattr.h>
 
 /* the file system name */
 #define WRAPFS_NAME "wrapfs"
