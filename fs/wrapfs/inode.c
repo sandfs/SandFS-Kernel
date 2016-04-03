@@ -311,11 +311,15 @@ out:
 	return err;
 }
 
-static const char *wrapfs_follow_link(struct dentry *dentry, void **cookie)
+static const char *wrapfs_get_link(struct dentry *dentry, struct inode *inode,
+				   struct delayed_call *done)
 {
 	char *buf;
 	int len = PAGE_SIZE, err;
 	mm_segment_t old_fs;
+
+	if (!dentry)
+		return ERR_PTR(-ECHILD);
 
 	/* This is freed by the put_link method assuming a successful call. */
 	buf = kmalloc(len, GFP_KERNEL);
@@ -335,7 +339,8 @@ static const char *wrapfs_follow_link(struct dentry *dentry, void **cookie)
 	} else {
 		buf[err] = '\0';
 	}
-	return *cookie = buf;
+	set_delayed_call(done, kfree_link, buf);
+	return buf;
 }
 
 static int wrapfs_permission(struct inode *inode, int mask)
@@ -542,10 +547,9 @@ out:
 const struct inode_operations wrapfs_symlink_iops = {
 	.readlink	= wrapfs_readlink,
 	.permission	= wrapfs_permission,
-	.follow_link	= wrapfs_follow_link,
 	.setattr	= wrapfs_setattr,
 	.getattr	= wrapfs_getattr,
-	.put_link	= kfree_put_link,
+	.get_link	= wrapfs_get_link,
 	.setxattr	= wrapfs_setxattr,
 	.getxattr	= wrapfs_getxattr,
 	.listxattr	= wrapfs_listxattr,
