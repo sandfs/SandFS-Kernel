@@ -193,13 +193,13 @@ static inline void wrapfs_put_reset_lower_path(const struct dentry *dent)
 static inline struct dentry *lock_parent(struct dentry *dentry)
 {
 	struct dentry *dir = dget_parent(dentry);
-	mutex_lock_nested(&d_inode(dir)->i_mutex, I_MUTEX_PARENT);
+	inode_lock_nested(d_inode(dir), I_MUTEX_PARENT);
 	return dir;
 }
 
 static inline void unlock_dir(struct dentry *dir)
 {
-	mutex_unlock(&d_inode(dir)->i_mutex);
+	inode_unlock(d_inode(dir));
 	dput(dir);
 }
 #endif	/* not _WRAPFS_H_ */
