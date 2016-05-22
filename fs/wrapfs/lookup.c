@@ -144,27 +144,24 @@ struct inode *wrapfs_iget(struct super_block *sb, struct inode *lower_inode)
 }
 
 /*
- * Connect a wrapfs inode dentry/inode with several lower ones.  This is
- * the classic stackable file system "vnode interposition" action.
- *
- * @dentry: wrapfs's dentry which interposes on lower one
- * @sb: wrapfs's super_block
- * @lower_path: the lower path (caller does path_get/put)
+ * Helper interpose routine, called directly by ->lookup to handle
+ * spliced dentries.
  */
-int wrapfs_interpose(struct dentry *dentry, struct super_block *sb,
-		     struct path *lower_path)
+static struct dentry *__wrapfs_interpose(struct dentry *dentry,
+					 struct super_block *sb,
+					 struct path *lower_path)
 {
-	int err = 0;
 	struct inode *inode;
 	struct inode *lower_inode;
 	struct super_block *lower_sb;
+	struct dentry *ret_dentry;
 
 	lower_inode = d_inode(lower_path->dentry);
 	lower_sb = wrapfs_lower_super(sb);
 
 	/* check that the lower file system didn't cross a mount point */
 	if (lower_inode->i_sb != lower_sb) {
-		err = -EXDEV;
+		ret_dentry = ERR_PTR(-EXDEV);
 		goto out;
 	}
 
@@ -176,14 +173,31 @@ int wrapfs_interpose(struct dentry *dentry, struct super_block *sb,
 	/* inherit lower inode number for wrapfs's inode */
 	inode = wrapfs_iget(sb, lower_inode);
 	if (IS_ERR(inode)) {
-		err = PTR_ERR(inode);
+		ret_dentry = ERR_PTR(PTR_ERR(inode));
 		goto out;
 	}
 
-	d_add(dentry, inode);
+	ret_dentry = d_splice_alias(inode, dentry);
 
 out:
-	return err;
+	return ret_dentry;
+}
+
+/*
+ * Connect a wrapfs inode dentry/inode with several lower ones.  This is
+ * the classic stackable file system "vnode interposition" action.
+ *
+ * @dentry: wrapfs's dentry which interposes on lower one
+ * @sb: wrapfs's super_block
+ * @lower_path: the lower path (caller does path_get/put)
+ */
+int wrapfs_interpose(struct dentry *dentry, struct super_block *sb,
+		     struct path *lower_path)
+{
+	struct dentry *ret_dentry;
+
+	ret_dentry = __wrapfs_interpose(dentry, sb, lower_path);
+	return PTR_ERR(ret_dentry);
 }
 
 /*
@@ -203,6 +217,7 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry,
 	const char *name;
 	struct path lower_path;
 	struct qstr this;
+	struct dentry *ret_dentry = NULL;
 
 	/* must initialize dentry operations */
 	d_set_d_op(dentry, &wrapfs_dops);
@@ -223,9 +238,13 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry,
 	/* no error: handle positive dentries */
 	if (!err) {
 		wrapfs_set_lower_path(dentry, &lower_path);
-		err = wrapfs_interpose(dentry, dentry->d_sb, &lower_path);
-		if (err) /* path_put underlying path on error */
+		ret_dentry =
+			__wrapfs_interpose(dentry, dentry->d_sb, &lower_path);
+		if (IS_ERR(ret_dentry)) {
+			err = PTR_ERR(ret_dentry);
+			 /* path_put underlying path on error */
 			wrapfs_put_reset_lower_path(dentry);
+		}
 		goto out;
 	}
 
@@ -265,7 +284,9 @@ setup_lower:
 		err = 0;
 
 out:
-	return ERR_PTR(err);
+	if (err)
+		return ERR_PTR(err);
+	return ret_dentry;
 }
 
 struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
