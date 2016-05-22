@@ -280,7 +280,7 @@ setup_lower:
 	 * the VFS will continue the process of making this negative dentry
 	 * into a positive one.
 	 */
-	if (flags & (LOOKUP_CREATE|LOOKUP_RENAME_TARGET))
+	if (err == -ENOENT || (flags & (LOOKUP_CREATE|LOOKUP_RENAME_TARGET)))
 		err = 0;
 
 out:

@@ -166,3 +166,43 @@ const struct super_operations wrapfs_sops = {
 	.destroy_inode	= wrapfs_destroy_inode,
 	.drop_inode	= generic_delete_inode,
 };
+
+/* NFS support */
+
+static struct inode *wrapfs_nfs_get_inode(struct super_block *sb, u64 ino,
+					  u32 generation)
+{
+	struct super_block *lower_sb;
+	struct inode *inode;
+	struct inode *lower_inode;
+
+	lower_sb = wrapfs_lower_super(sb);
+	lower_inode = ilookup(lower_sb, ino);
+	inode = wrapfs_iget(sb, lower_inode);
+	return inode;
+}
+
+static struct dentry *wrapfs_fh_to_dentry(struct super_block *sb,
+					  struct fid *fid, int fh_len,
+					  int fh_type)
+{
+	return generic_fh_to_dentry(sb, fid, fh_len, fh_type,
+				    wrapfs_nfs_get_inode);
+}
+
+static struct dentry *wrapfs_fh_to_parent(struct super_block *sb,
+					  struct fid *fid, int fh_len,
+					  int fh_type)
+{
+	return generic_fh_to_parent(sb, fid, fh_len, fh_type,
+				    wrapfs_nfs_get_inode);
+}
+
+/*
+ * all other funcs are default as defined in exportfs/expfs.c
+ */
+
+const struct export_operations wrapfs_export_ops = {
+	.fh_to_dentry	   = wrapfs_fh_to_dentry,
+	.fh_to_parent	   = wrapfs_fh_to_parent
+};

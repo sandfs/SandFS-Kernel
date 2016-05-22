@@ -64,6 +64,8 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 
 	sb->s_op = &wrapfs_sops;
 
+	sb->s_export_op = &wrapfs_export_ops; /* adding NFS support */
+
 	/* get a new inode and allocate our root dentry */
 	inode = wrapfs_iget(sb, d_inode(lower_path.dentry));
 	if (IS_ERR(inode)) {
