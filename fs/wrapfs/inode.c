@@ -475,16 +475,18 @@ out:
 }
 
 static ssize_t
-wrapfs_getxattr(struct dentry *dentry, const char *name, void *buffer,
-		size_t size)
+wrapfs_getxattr(struct dentry *dentry, struct inode *inode,
+		const char *name, void *buffer, size_t size)
 {
 	int err;
 	struct dentry *lower_dentry;
+	struct inode *lower_inode;
 	struct path lower_path;
 
 	wrapfs_get_lower_path(dentry, &lower_path);
 	lower_dentry = lower_path.dentry;
-	if (!d_inode(lower_dentry)->i_op->getxattr) {
+	lower_inode = wrapfs_lower_inode(inode);
+	if (!lower_inode->i_op->getxattr) {
 		err = -EOPNOTSUPP;
 		goto out;
 	}
