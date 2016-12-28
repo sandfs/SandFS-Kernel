@@ -63,6 +63,7 @@ static int wrapfs_read_super(struct super_block *sb, void *raw_data, int silent)
 	sb->s_time_gran = 1;
 
 	sb->s_op = &wrapfs_sops;
+	sb->s_xattr = wrapfs_xattr_handlers;
 
 	sb->s_export_op = &wrapfs_export_ops; /* adding NFS support */
 

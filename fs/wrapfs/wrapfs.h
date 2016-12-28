@@ -48,6 +48,7 @@ extern const struct dentry_operations wrapfs_dops;
 extern const struct address_space_operations wrapfs_aops, wrapfs_dummy_aops;
 extern const struct vm_operations_struct wrapfs_vm_ops;
 extern const struct export_operations wrapfs_export_ops;
+extern const struct xattr_handler *wrapfs_xattr_handlers[];
 
 extern int wrapfs_init_inode_cache(void);
 extern void wrapfs_destroy_inode_cache(void);
