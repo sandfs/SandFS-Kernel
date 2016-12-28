@@ -369,7 +369,7 @@ static int wrapfs_setattr(struct dentry *dentry, struct iattr *ia)
 	 * this user can change the lower inode: that should happen when
 	 * calling notify_change on the lower inode.
 	 */
-	err = inode_change_ok(inode, ia);
+	err = setattr_prepare(dentry, ia);
 	if (err)
 		goto out_err;
 
