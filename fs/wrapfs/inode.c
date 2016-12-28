@@ -233,7 +233,8 @@ out:
  * superblock-level name-space lock for renames and copy-ups.
  */
 static int wrapfs_rename(struct inode *old_dir, struct dentry *old_dentry,
-			 struct inode *new_dir, struct dentry *new_dentry)
+			 struct inode *new_dir, struct dentry *new_dentry,
+			 unsigned int flags)
 {
 	int err = 0;
 	struct dentry *lower_old_dentry = NULL;
@@ -242,6 +243,9 @@ static int wrapfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	struct dentry *lower_new_dir_dentry = NULL;
 	struct dentry *trap = NULL;
 	struct path lower_old_path, lower_new_path;
+
+	if (flags)
+		return -EINVAL;
 
 	wrapfs_get_lower_path(old_dentry, &lower_old_path);
 	wrapfs_get_lower_path(new_dentry, &lower_new_path);
