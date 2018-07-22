@@ -1,0 +1,4 @@
+config SANDFS
+	tristate "Sandfs sandboxing file system (EXPERIMENTAL)"
+	help
+	  Sandfs is a sandboxing file system.

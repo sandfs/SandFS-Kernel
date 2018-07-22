@@ -576,6 +576,7 @@ void bpf_register_prog_type(struct bpf_prog_type_list *tl)
 {
 	list_add(&tl->list_node, &bpf_prog_types);
 }
+EXPORT_SYMBOL_GPL(bpf_register_prog_type);
 
 /* fixup insn->imm field of bpf_call instructions:
  * if (insn->imm == BPF_FUNC_map_lookup_elem)
@@ -841,7 +842,8 @@ static int bpf_prog_load(union bpf_attr *attr)
 	    attr->kern_version != LINUX_VERSION_CODE)
 		return -EINVAL;
 
-	if (type != BPF_PROG_TYPE_SOCKET_FILTER && !capable(CAP_SYS_ADMIN))
+	if ((type != BPF_PROG_TYPE_SOCKET_FILTER &&
+			type != BPF_PROG_TYPE_SANDFS) && !capable(CAP_SYS_ADMIN))
 		return -EPERM;
 
 	/* plain bpf_prog allocation */

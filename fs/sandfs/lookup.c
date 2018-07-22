@@ -9,42 +9,42 @@
  * published by the Free Software Foundation.
  */
 
-#include "wrapfs.h"
+#include "sandfs.h"
 
 /* The dentry cache is just so we have properly sized dentries */
-static struct kmem_cache *wrapfs_dentry_cachep;
+static struct kmem_cache *sandfs_dentry_cachep;
 
-int wrapfs_init_dentry_cache(void)
+int sandfs_init_dentry_cache(void)
 {
-	wrapfs_dentry_cachep =
-		kmem_cache_create("wrapfs_dentry",
-				  sizeof(struct wrapfs_dentry_info),
+	sandfs_dentry_cachep =
+		kmem_cache_create("sandfs_dentry",
+				  sizeof(struct sandfs_dentry_info),
 				  0, SLAB_RECLAIM_ACCOUNT, NULL);
 
-	return wrapfs_dentry_cachep ? 0 : -ENOMEM;
+	return sandfs_dentry_cachep ? 0 : -ENOMEM;
 }
 
-void wrapfs_destroy_dentry_cache(void)
+void sandfs_destroy_dentry_cache(void)
 {
-	if (wrapfs_dentry_cachep)
-		kmem_cache_destroy(wrapfs_dentry_cachep);
+	if (sandfs_dentry_cachep)
+		kmem_cache_destroy(sandfs_dentry_cachep);
 }
 
-void wrapfs_free_dentry_private_data(struct dentry *dentry)
+void sandfs_free_dentry_private_data(struct dentry *dentry)
 {
 	if (!dentry || !dentry->d_fsdata)
 		return;
-	kmem_cache_free(wrapfs_dentry_cachep, dentry->d_fsdata);
+	kmem_cache_free(sandfs_dentry_cachep, dentry->d_fsdata);
 	dentry->d_fsdata = NULL;
 }
 
 /* allocate new dentry private data */
-int wrapfs_new_dentry_private_data(struct dentry *dentry)
+int sandfs_new_dentry_private_data(struct dentry *dentry)
 {
-	struct wrapfs_dentry_info *info = WRAPFS_D(dentry);
+	struct sandfs_dentry_info *info = SANDFS_D(dentry);
 
 	/* use zalloc to init dentry_info.lower_path */
-	info = kmem_cache_zalloc(wrapfs_dentry_cachep, GFP_ATOMIC);
+	info = kmem_cache_zalloc(sandfs_dentry_cachep, GFP_ATOMIC);
 	if (!info)
 		return -ENOMEM;
 
@@ -54,24 +54,24 @@ int wrapfs_new_dentry_private_data(struct dentry *dentry)
 	return 0;
 }
 
-static int wrapfs_inode_test(struct inode *inode, void *candidate_lower_inode)
+static int sandfs_inode_test(struct inode *inode, void *candidate_lower_inode)
 {
-	struct inode *current_lower_inode = wrapfs_lower_inode(inode);
+	struct inode *current_lower_inode = sandfs_lower_inode(inode);
 	if (current_lower_inode == (struct inode *)candidate_lower_inode)
 		return 1; /* found a match */
 	else
 		return 0; /* no match */
 }
 
-static int wrapfs_inode_set(struct inode *inode, void *lower_inode)
+static int sandfs_inode_set(struct inode *inode, void *lower_inode)
 {
-	/* we do actual inode initialization in wrapfs_iget */
+	/* we do actual inode initialization in sandfs_iget */
 	return 0;
 }
 
-struct inode *wrapfs_iget(struct super_block *sb, struct inode *lower_inode)
+struct inode *sandfs_iget(struct super_block *sb, struct inode *lower_inode)
 {
-	struct wrapfs_inode_info *info;
+	struct sandfs_inode_info *info;
 	struct inode *inode; /* the new inode to return */
 
 	if (!igrab(lower_inode))
@@ -83,8 +83,8 @@ struct inode *wrapfs_iget(struct super_block *sb, struct inode *lower_inode)
 			      * instead.
 			      */
 			     lower_inode->i_ino, /* hashval */
-			     wrapfs_inode_test,	/* inode comparison function */
-			     wrapfs_inode_set, /* inode init function */
+			     sandfs_inode_test,	/* inode comparison function */
+			     sandfs_inode_set, /* inode init function */
 			     lower_inode); /* data passed to test+set fxns */
 	if (!inode) {
 		iput(lower_inode);
@@ -97,28 +97,28 @@ struct inode *wrapfs_iget(struct super_block *sb, struct inode *lower_inode)
 	}
 
 	/* initialize new inode */
-	info = WRAPFS_I(inode);
+	info = SANDFS_I(inode);
 
 	inode->i_ino = lower_inode->i_ino;
-	wrapfs_set_lower_inode(inode, lower_inode);
+	sandfs_set_lower_inode(inode, lower_inode);
 
 	inode->i_version++;
 
 	/* use different set of inode ops for symlinks & directories */
 	if (S_ISDIR(lower_inode->i_mode))
-		inode->i_op = &wrapfs_dir_iops;
+		inode->i_op = &sandfs_dir_iops;
 	else if (S_ISLNK(lower_inode->i_mode))
-		inode->i_op = &wrapfs_symlink_iops;
+		inode->i_op = &sandfs_symlink_iops;
 	else
-		inode->i_op = &wrapfs_main_iops;
+		inode->i_op = &sandfs_main_iops;
 
 	/* use different set of file ops for directories */
 	if (S_ISDIR(lower_inode->i_mode))
-		inode->i_fop = &wrapfs_dir_fops;
+		inode->i_fop = &sandfs_dir_fops;
 	else
-		inode->i_fop = &wrapfs_main_fops;
+		inode->i_fop = &sandfs_main_fops;
 
-	inode->i_mapping->a_ops = &wrapfs_aops;
+	inode->i_mapping->a_ops = &sandfs_aops;
 
 	inode->i_atime.tv_sec = 0;
 	inode->i_atime.tv_nsec = 0;
@@ -145,7 +145,7 @@ struct inode *wrapfs_iget(struct super_block *sb, struct inode *lower_inode)
  * Helper interpose routine, called directly by ->lookup to handle
  * spliced dentries.
  */
-static struct dentry *__wrapfs_interpose(struct dentry *dentry,
+static struct dentry *__sandfs_interpose(struct dentry *dentry,
 					 struct super_block *sb,
 					 struct path *lower_path)
 {
@@ -155,7 +155,7 @@ static struct dentry *__wrapfs_interpose(struct dentry *dentry,
 	struct dentry *ret_dentry;
 
 	lower_inode = d_inode(lower_path->dentry);
-	lower_sb = wrapfs_lower_super(sb);
+	lower_sb = sandfs_lower_super(sb);
 
 	/* check that the lower file system didn't cross a mount point */
 	if (lower_inode->i_sb != lower_sb) {
@@ -164,12 +164,12 @@ static struct dentry *__wrapfs_interpose(struct dentry *dentry,
 	}
 
 	/*
-	 * We allocate our new inode below by calling wrapfs_iget,
+	 * We allocate our new inode below by calling sandfs_iget,
 	 * which will initialize some of the new inode's fields
 	 */
 
-	/* inherit lower inode number for wrapfs's inode */
-	inode = wrapfs_iget(sb, lower_inode);
+	/* inherit lower inode number for sandfs's inode */
+	inode = sandfs_iget(sb, lower_inode);
 	if (IS_ERR(inode)) {
 		ret_dentry = ERR_PTR(PTR_ERR(inode));
 		goto out;
@@ -182,30 +182,30 @@ out:
 }
 
 /*
- * Connect a wrapfs inode dentry/inode with several lower ones.  This is
+ * Connect a sandfs inode dentry/inode with several lower ones.  This is
  * the classic stackable file system "vnode interposition" action.
  *
- * @dentry: wrapfs's dentry which interposes on lower one
- * @sb: wrapfs's super_block
+ * @dentry: sandfs's dentry which interposes on lower one
+ * @sb: sandfs's super_block
  * @lower_path: the lower path (caller does path_get/put)
  */
-int wrapfs_interpose(struct dentry *dentry, struct super_block *sb,
+int sandfs_interpose(struct dentry *dentry, struct super_block *sb,
 		     struct path *lower_path)
 {
 	struct dentry *ret_dentry;
 
-	ret_dentry = __wrapfs_interpose(dentry, sb, lower_path);
+	ret_dentry = __sandfs_interpose(dentry, sb, lower_path);
 	return PTR_ERR(ret_dentry);
 }
 
 /*
- * Main driver function for wrapfs's lookup.
+ * Main driver function for sandfs's lookup.
  *
  * Returns: NULL (ok), ERR_PTR if an error occurred.
  * Fills in lower_parent_path with <dentry,mnt> on success.
  */
-static struct dentry *__wrapfs_lookup(struct dentry *dentry,
-				      unsigned int flags,
+static struct dentry *__sandfs_lookup(struct inode *dir,
+                      struct dentry *dentry, unsigned int flags,
 				      struct path *lower_parent_path)
 {
 	int err = 0;
@@ -218,7 +218,7 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry,
 	struct dentry *ret_dentry = NULL;
 
 	/* must initialize dentry operations */
-	d_set_d_op(dentry, &wrapfs_dops);
+	d_set_d_op(dentry, &sandfs_dops);
 
 	if (IS_ROOT(dentry))
 		goto out;
@@ -230,19 +230,49 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry,
 	lower_dir_mnt = lower_parent_path->mnt;
 
 	/* Use vfs_path_lookup to check if the dentry exists or not */
-	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
+	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, flags,
 			      &lower_path);
 
 	/* no error: handle positive dentries */
 	if (!err) {
-		wrapfs_set_lower_path(dentry, &lower_path);
+		struct sandfs_args args;
+		const char *path;
+		void *path_buf = vmalloc(PATH_MAX);
+		if (IS_ERR(path_buf)) {
+			pr_err("[%s:%d] Failed to alloc memory for file path\n",
+				__func__, __LINE__);
+			err = ENOMEM;
+			goto out;
+		}
+
+		path = d_path(&lower_path, (char *)path_buf, PATH_MAX);
+		if (!path) {
+			pr_err("[%s,%d] Failed to get path\n", __func__, __LINE__);
+			vfree(path_buf);
+			err = -EIO;
+			goto out;
+		}
+
+		args.args[0].size = strlen(path);
+		args.args[0].value = (void *)path;
+
+		args.num_args = 1;
+		args.op = SANDFS_LOOKUP;
+		err = sandfs_request_bpf_op(SANDFS_SB(dir->i_sb)->priv, &args);
+		if (err < 0) {
+			vfree(path_buf);
+			goto out;
+		}
+
+		sandfs_set_lower_path(dentry, &lower_path);
 		ret_dentry =
-			__wrapfs_interpose(dentry, dentry->d_sb, &lower_path);
+			__sandfs_interpose(dentry, dentry->d_sb, &lower_path);
 		if (IS_ERR(ret_dentry)) {
 			err = PTR_ERR(ret_dentry);
 			 /* path_put underlying path on error */
-			wrapfs_put_reset_lower_path(dentry);
+			sandfs_put_reset_lower_path(dentry);
 		}
+		vfree(path_buf);
 		goto out;
 	}
 
@@ -271,7 +301,7 @@ static struct dentry *__wrapfs_lookup(struct dentry *dentry,
 setup_lower:
 	lower_path.dentry = lower_dentry;
 	lower_path.mnt = mntget(lower_dir_mnt);
-	wrapfs_set_lower_path(dentry, &lower_path);
+	sandfs_set_lower_path(dentry, &lower_path);
 
 	/*
 	 * If the intent is to create a file, then don't return an error, so
@@ -287,7 +317,7 @@ out:
 	return ret_dentry;
 }
 
-struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
+struct dentry *sandfs_lookup(struct inode *dir, struct dentry *dentry,
 			     unsigned int flags)
 {
 	int err;
@@ -296,28 +326,28 @@ struct dentry *wrapfs_lookup(struct inode *dir, struct dentry *dentry,
 
 	parent = dget_parent(dentry);
 
-	wrapfs_get_lower_path(parent, &lower_parent_path);
+	sandfs_get_lower_path(parent, &lower_parent_path);
 
 	/* allocate dentry private data.  We free it in ->d_release */
-	err = wrapfs_new_dentry_private_data(dentry);
+	err = sandfs_new_dentry_private_data(dentry);
 	if (err) {
 		ret = ERR_PTR(err);
 		goto out;
 	}
-	ret = __wrapfs_lookup(dentry, flags, &lower_parent_path);
+	ret = __sandfs_lookup(dir, dentry, flags, &lower_parent_path);
 	if (IS_ERR(ret))
 		goto out;
 	if (ret)
 		dentry = ret;
 	if (d_inode(dentry))
 		fsstack_copy_attr_times(d_inode(dentry),
-					wrapfs_lower_inode(d_inode(dentry)));
+					sandfs_lower_inode(d_inode(dentry)));
 	/* update parent directory's atime */
 	fsstack_copy_attr_atime(d_inode(parent),
-				wrapfs_lower_inode(d_inode(parent)));
+				sandfs_lower_inode(d_inode(parent)));
 
 out:
-	wrapfs_put_lower_path(parent, &lower_parent_path);
+	sandfs_put_lower_path(parent, &lower_parent_path);
 	dput(parent);
 	return ret;
 }

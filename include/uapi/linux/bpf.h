@@ -105,6 +105,7 @@ enum bpf_prog_type {
 	BPF_PROG_TYPE_LWT_IN,
 	BPF_PROG_TYPE_LWT_OUT,
 	BPF_PROG_TYPE_LWT_XMIT,
+	BPF_PROG_TYPE_SANDFS,
 };
 
 enum bpf_attach_type {
@@ -476,6 +477,7 @@ union bpf_attr {
 	FN(get_hash_recalc),		\
 	FN(get_current_task),		\
 	FN(probe_write_user),		\
+	FN(probe_read_str),			\
 	FN(current_task_under_cgroup),	\
 	FN(skb_change_tail),		\
 	FN(skb_pull_data),		\
@@ -483,7 +485,9 @@ union bpf_attr {
 	FN(set_hash_invalid),		\
 	FN(get_numa_node_id),		\
 	FN(skb_change_head),		\
-	FN(xdp_adjust_head),
+	FN(xdp_adjust_head),		\
+	FN(sandfs_write_args),		\
+	FN(sandfs_read_args),
 
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper
  * function eBPF program intends to call

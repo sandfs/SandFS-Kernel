@@ -64,6 +64,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
 	bool is_kretprobe = strncmp(event, "kretprobe/", 10) == 0;
 	bool is_tracepoint = strncmp(event, "tracepoint/", 11) == 0;
 	bool is_xdp = strncmp(event, "xdp", 3) == 0;
+	bool is_sandfs = strncmp(event, "sandfs", 6) == 0;
 	bool is_perf_event = strncmp(event, "perf_event", 10) == 0;
 	bool is_cgroup_skb = strncmp(event, "cgroup/skb", 10) == 0;
 	bool is_cgroup_sk = strncmp(event, "cgroup/sock", 11) == 0;
@@ -86,6 +87,8 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
 		prog_type = BPF_PROG_TYPE_TRACEPOINT;
 	} else if (is_xdp) {
 		prog_type = BPF_PROG_TYPE_XDP;
+	} else if (is_sandfs) {
+		prog_type = BPF_PROG_TYPE_SANDFS;
 	} else if (is_perf_event) {
 		prog_type = BPF_PROG_TYPE_PERF_EVENT;
 	} else if (is_cgroup_skb) {
@@ -106,7 +109,7 @@ static int load_and_attach(const char *event, struct bpf_insn *prog, int size)
 
 	prog_fd[prog_cnt++] = fd;
 
-	if (is_xdp || is_perf_event || is_cgroup_skb || is_cgroup_sk)
+	if (is_xdp || is_sandfs || is_perf_event || is_cgroup_skb || is_cgroup_sk)
 		return 0;
 
 	if (is_socket) {
@@ -209,6 +212,7 @@ static int load_maps(struct bpf_map_def *maps, int len)
 			return 1;
 		}
 
+		//fprintf(stdout, "Created map %d fd: %d\n", i, map_fd[i]);
 		if (maps[i].type == BPF_MAP_TYPE_PROG_ARRAY)
 			prog_array_fd = map_fd[i];
 	}
@@ -276,6 +280,7 @@ int load_bpf_file(char *path)
 	GElf_Shdr shdr, shdr_prog;
 	Elf_Data *data, *data_prog, *symbols = NULL;
 	char *shname, *shname_prog;
+	uid_t uid=getuid(), euid=geteuid();
 
 	if (elf_version(EV_CURRENT) == EV_NONE)
 		return 1;
@@ -293,7 +298,8 @@ int load_bpf_file(char *path)
 		return 1;
 
 	/* clear all kprobes */
-	i = system("echo \"\" > /sys/kernel/debug/tracing/kprobe_events");
+	if (uid != euid)
+		i = system("echo \"\" > /sys/kernel/debug/tracing/kprobe_events");
 
 	/* scan over all elf sections to get license and map info */
 	for (i = 1; i < ehdr.e_shnum; i++) {
@@ -354,6 +360,7 @@ int load_bpf_file(char *path)
 			    memcmp(shname_prog, "kretprobe/", 10) == 0 ||
 			    memcmp(shname_prog, "tracepoint/", 11) == 0 ||
 			    memcmp(shname_prog, "xdp", 3) == 0 ||
+				memcmp(shname_prog, "sandfs", 6) == 0 ||
 			    memcmp(shname_prog, "perf_event", 10) == 0 ||
 			    memcmp(shname_prog, "socket", 6) == 0 ||
 			    memcmp(shname_prog, "cgroup/", 7) == 0)
@@ -374,6 +381,7 @@ int load_bpf_file(char *path)
 		    memcmp(shname, "kretprobe/", 10) == 0 ||
 		    memcmp(shname, "tracepoint/", 11) == 0 ||
 		    memcmp(shname, "xdp", 3) == 0 ||
+			memcmp(shname, "sandfs", 6) == 0 ||
 		    memcmp(shname, "perf_event", 10) == 0 ||
 		    memcmp(shname, "socket", 6) == 0 ||
 		    memcmp(shname, "cgroup/", 7) == 0)

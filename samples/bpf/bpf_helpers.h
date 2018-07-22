@@ -17,6 +17,8 @@ static int (*bpf_map_delete_elem)(void *map, void *key) =
 	(void *) BPF_FUNC_map_delete_elem;
 static int (*bpf_probe_read)(void *dst, int size, void *unsafe_ptr) =
 	(void *) BPF_FUNC_probe_read;
+static int (*bpf_probe_read_str)(void *dst, int size, void *unsafe_ptr) =
+	(void *) BPF_FUNC_probe_read_str;
 static unsigned long long (*bpf_ktime_get_ns)(void) =
 	(void *) BPF_FUNC_ktime_get_ns;
 static int (*bpf_trace_printk)(const char *fmt, int fmt_size, ...) =
@@ -59,6 +61,12 @@ static unsigned long long (*bpf_get_prandom_u32)(void) =
 	(void *) BPF_FUNC_get_prandom_u32;
 static int (*bpf_xdp_adjust_head)(void *ctx, int offset) =
 	(void *) BPF_FUNC_xdp_adjust_head;
+#ifdef CONFIG_SANDFS
+static int (*bpf_sandfs_read_args)(void *ctx, int param, void *unsafe_ptr, int size) =
+	(void *) BPF_FUNC_sandfs_read_args;
+static int (*bpf_sandfs_write_args)(void *ctx, int param, const void *unsafe_ptr, int size) =
+	(void *) BPF_FUNC_sandfs_write_args;
+#endif
 
 /* llvm builtin functions that eBPF C program may use to
  * emit BPF_LD_ABS and BPF_LD_IND instructions
